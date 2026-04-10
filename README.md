@@ -157,6 +157,19 @@ seed ข้อมูลตัวอย่าง:
 make seed
 ```
 
+บัญชีตัวอย่างที่ได้จากการ seed:
+
+- ADMIN
+	- email: `admin@example.com`
+	- password: `Password123!`
+- ORGANIZER
+	- email: `organizer@example.com`
+	- password: `Password123!`
+
+หมายเหตุ:
+- สคริปต์ seed จะตรวจ email ซ้ำก่อน insert (รันซ้ำแล้วไม่เพิ่มข้อมูลซ้ำ)
+- ควรเปลี่ยนรหัสผ่านเริ่มต้นทันทีหลังล็อกอินครั้งแรก
+
 ## คู่มือทดสอบ API แยกไฟล์
 
 ดูวิธีรันและทดสอบ API แบบละเอียดที่ไฟล์ **[TEST_API.md](TEST_API.md)**
