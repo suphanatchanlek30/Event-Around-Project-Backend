@@ -10,6 +10,12 @@ from app.core.security import get_password_hash
 def seed_users(db: Session):
     demo_users = [
         {
+            "full_name": "Admin Demo",
+            "email": "admin@example.com",
+            "password_hash": get_password_hash("Password123!"),
+            "role": "ADMIN",
+        },
+        {
             "full_name": "Organizer Demo",
             "email": "organizer@example.com",
             "password_hash": get_password_hash("Password123!"),
