@@ -2,6 +2,14 @@
 
 คู่มือนี้รวมวิธีรัน API และวิธีทดสอบ endpoint ที่สำคัญของโปรเจกต์
 
+## สถานะโปรเจกต์ตอนนี้ (Phase)
+
+- ปัจจุบันอยู่ใน **UML Skeleton Phase** สำหรับโครงสร้าง OOP
+- คลาสตาม UML ถูกสร้างไว้ครบชุดที่ `app/domain` แล้ว
+- เมธอดในคลาส domain ส่วนใหญ่ยังเป็น `NotImplementedError` เพื่อรอเติม logic ตอนทำ API รอบถัดไป
+- API ที่ทดสอบได้ตอนนี้เน้นกลุ่ม Auth และ Health ตามรายการด้านล่าง
+- Auth ผ่านรอบ refactor ให้สอดคล้อง UML มากขึ้น โดยไม่เปลี่ยน request/response contract
+
 ## 1) รัน API
 
 ### 1.1 เปิด virtual environment
