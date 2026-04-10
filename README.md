@@ -9,6 +9,7 @@
 - Alembic สำหรับ migration
 - API ตรวจสถานะระบบ (`health`)
 - API สมัครสมาชิกนักศึกษา
+- API ยืนยันตัวตน (Auth) ครบชุดเบื้องต้น
 - สคริปต์ seed ข้อมูลตัวอย่าง
 - ชุดทดสอบเบื้องต้น
 
@@ -69,6 +70,11 @@ POSTGRES_HOST=localhost
 POSTGRES_PORT=5435
 
 DATABASE_URL=postgresql+psycopg://event_user:event_pass@localhost:5435/event_around_db
+
+JWT_SECRET_KEY=change-me-in-production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
 
 ### 4) เปิดฐานข้อมูล PostgreSQL
@@ -141,6 +147,17 @@ make seed
 ## คู่มือทดสอบ API แยกไฟล์
 
 ดูวิธีรันและทดสอบ API แบบละเอียดที่ไฟล์ `TEST_API.md`
+
+## Auth APIs ที่ทำแล้ว
+
+- POST /api/v1/auth/register/student
+- POST /api/v1/auth/register/organizer
+- POST /api/v1/auth/login
+- POST /api/v1/auth/refresh
+- POST /api/v1/auth/logout
+- GET /api/v1/auth/me
+- PATCH /api/v1/auth/me
+- POST /api/v1/auth/change-password
 
 ## Troubleshooting
 
