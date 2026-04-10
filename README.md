@@ -9,6 +9,8 @@
 - Alembic สำหรับ migration
 - API ตรวจสถานะระบบ (`health`)
 - API สมัครสมาชิกนักศึกษา
+- API ยืนยันตัวตน (Auth) ครบชุดเบื้องต้น
+- โครงคลาส UML (Skeleton Phase) ครบชุดใน `app/domain`
 - สคริปต์ seed ข้อมูลตัวอย่าง
 - ชุดทดสอบเบื้องต้น
 
@@ -20,9 +22,20 @@
 - Docker
 
 ## ความสัมพันธ์กับ UML
-- `User` คือ entity หลัก
-- `Student` แทนด้วย `User(role="STUDENT")`
-- `AuthManager` แทนด้วย `AuthService`
+- โปรเจกต์มีโครง UML แยกใน `app/domain` เพื่อเตรียม OOP เต็มรูปแบบ
+- ในเฟสนี้ คลาสใน `app/domain` เป็น skeleton (method signatures ครบ แต่ยังไม่ลง business logic ลึก)
+- API ปัจจุบันยังทำงานผ่าน service/repository เดิม และจะค่อย map เข้ากับ domain classes ในรอบถัดไป
+
+### UML Skeleton Classes ที่สร้างแล้ว
+- `User` (abstract)
+- `Student`
+- `Organizer`
+- `EventCategory`
+- `Event`
+- `EventManager`
+- `LocationService`
+- `AuthManager`
+- `EventAroundSystem`
 
 ## วิธีติดตั้งและรัน (Setup)
 
@@ -69,6 +82,11 @@ POSTGRES_HOST=localhost
 POSTGRES_PORT=5435
 
 DATABASE_URL=postgresql+psycopg://event_user:event_pass@localhost:5435/event_around_db
+
+JWT_SECRET_KEY=change-me-in-production
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
 
 ### 4) เปิดฐานข้อมูล PostgreSQL
@@ -141,6 +159,26 @@ make seed
 ## คู่มือทดสอบ API แยกไฟล์
 
 ดูวิธีรันและทดสอบ API แบบละเอียดที่ไฟล์ `TEST_API.md`
+
+## Auth APIs ที่ทำแล้ว
+
+- POST /api/v1/auth/register/student
+- POST /api/v1/auth/register/organizer
+- POST /api/v1/auth/login
+- POST /api/v1/auth/refresh
+- POST /api/v1/auth/logout
+- GET /api/v1/auth/me
+- PATCH /api/v1/auth/me
+- POST /api/v1/auth/change-password
+
+## UML Mapping Status (Auth รอบล่าสุด)
+
+- `AuthService` เริ่ม delegate บาง business flow ไปที่ `app/domain/AuthManager` แล้ว
+- `register_student` และ `register_organizer` ใช้ `AuthManager.register_student()` / `AuthManager.register_organizer()` เพื่อกำหนด role จาก domain
+- `is_email_unique` ใช้ `AuthManager.is_email_unique()` ใน flow ตรวจสอบอีเมลซ้ำ
+- `login` ใช้ `AuthManager.login()` ในชั้น domain ก่อนออก token
+- `User` domain มี `verify_password()` และ getter/setter หลัก เพื่อ map กับพฤติกรรมตาม UML
+- **API contract ไม่เปลี่ยน** จากสเปกเดิม
 
 ## Troubleshooting
 

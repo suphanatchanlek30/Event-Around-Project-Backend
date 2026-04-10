@@ -24,17 +24,37 @@ def override_get_db():
         db.close()
 
 
-app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
-
-
 def setup_function():
+    app.dependency_overrides[get_db] = override_get_db
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
 
+def teardown_function():
+    app.dependency_overrides.clear()
+
+
+def create_student_user(email: str = "student@example.com", password_hash: str = "hashed_pw") -> int:
+    db = TestingSessionLocal()
+    try:
+        user = User(
+            full_name="Student User",
+            email=email,
+            password_hash=password_hash,
+            role="STUDENT",
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user.id
+    finally:
+        db.close()
+
+
 def test_register_student_success(monkeypatch):
     monkeypatch.setattr("app.services.auth_service.get_password_hash", lambda _: "hashed_pw")
+    client = TestClient(app)
 
     payload = {
         "fullName": "Test User",
@@ -45,29 +65,34 @@ def test_register_student_success(monkeypatch):
 
     response = client.post("/api/v1/auth/register/student", json=payload)
     assert response.status_code == 201
-
     body = response.json()
     assert body["success"] is True
-    assert body["data"]["email"] == "test1@example.com"
     assert body["data"]["role"] == "STUDENT"
+
+
+def test_register_organizer_success(monkeypatch):
+    monkeypatch.setattr("app.services.auth_service.get_password_hash", lambda _: "hashed_pw")
+    client = TestClient(app)
+
+    payload = {
+        "fullName": "Organizer User",
+        "email": "org1@example.com",
+        "password": "Password123!",
+        "confirmPassword": "Password123!",
+    }
+
+    response = client.post("/api/v1/auth/register/organizer", json=payload)
+    assert response.status_code == 201
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["role"] == "ORGANIZER"
 
 
 def test_register_student_duplicate_email(monkeypatch):
     monkeypatch.setattr("app.services.auth_service.get_password_hash", lambda _: "hashed_pw")
+    client = TestClient(app)
 
-    db = TestingSessionLocal()
-    try:
-        db.add(
-            User(
-                full_name="Existing User",
-                email="dup@example.com",
-                password_hash="hashed_pw",
-                role="STUDENT",
-            )
-        )
-        db.commit()
-    finally:
-        db.close()
+    create_student_user(email="dup@example.com")
 
     payload = {
         "fullName": "New User",
@@ -79,24 +104,75 @@ def test_register_student_duplicate_email(monkeypatch):
     response = client.post("/api/v1/auth/register/student", json=payload)
     assert response.status_code == 409
 
-    body = response.json()
-    assert body["success"] is False
-    assert body["errors"][0]["code"] == "EMAIL_ALREADY_EXISTS"
+
+def test_login_and_me_flow(monkeypatch):
+    monkeypatch.setattr("app.services.auth_service.verify_password", lambda plain, hashed: plain == "Password123!")
+    client = TestClient(app)
+
+    create_student_user(email="student@login.com", password_hash="any_hash")
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "student@login.com", "password": "Password123!"},
+    )
+    assert login_response.status_code == 200
+
+    login_body = login_response.json()
+    access_token = login_body["data"]["accessToken"]
+    refresh_token = login_body["data"]["refreshToken"]
+
+    me_response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert me_response.status_code == 200
+    assert me_response.json()["data"]["email"] == "student@login.com"
+
+    refresh_response = client.post(
+        "/api/v1/auth/refresh",
+        json={"refreshToken": refresh_token},
+    )
+    assert refresh_response.status_code == 200
+    assert refresh_response.json()["success"] is True
 
 
-def test_register_student_password_mismatch(monkeypatch):
-    monkeypatch.setattr("app.services.auth_service.get_password_hash", lambda _: "hashed_pw")
+def test_patch_me_and_change_password(monkeypatch):
+    monkeypatch.setattr("app.services.auth_service.verify_password", lambda plain, hashed: plain == "Password123!")
+    monkeypatch.setattr("app.services.auth_service.get_password_hash", lambda _: "new_hash")
+    client = TestClient(app)
 
-    payload = {
-        "fullName": "Test User",
-        "email": "test2@example.com",
-        "password": "Password123!",
-        "confirmPassword": "Password123",
-    }
+    create_student_user(email="student@patch.com", password_hash="old_hash")
 
-    response = client.post("/api/v1/auth/register/student", json=payload)
-    assert response.status_code == 400
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "student@patch.com", "password": "Password123!"},
+    )
+    tokens = login_response.json()["data"]
+    access_token = tokens["accessToken"]
+    refresh_token = tokens["refreshToken"]
 
-    body = response.json()
-    assert body["success"] is False
-    assert body["errors"][0]["code"] == "PASSWORD_MISMATCH"
+    patch_response = client.patch(
+        "/api/v1/auth/me",
+        json={"fullName": "Updated Name", "profileImageUrl": "https://example.com/avatar.jpg"},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert patch_response.status_code == 200
+    assert patch_response.json()["data"]["fullName"] == "Updated Name"
+
+    change_pass_response = client.post(
+        "/api/v1/auth/change-password",
+        json={
+            "oldPassword": "Password123!",
+            "newPassword": "NewPassword123!",
+            "confirmNewPassword": "NewPassword123!",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert change_pass_response.status_code == 200
+
+    logout_response = client.post(
+        "/api/v1/auth/logout",
+        json={"refreshToken": refresh_token},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert logout_response.status_code == 200

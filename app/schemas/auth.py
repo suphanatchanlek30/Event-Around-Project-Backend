@@ -22,6 +22,56 @@ class RegisterStudentRequest(BaseModel):
     }
 
 
+class RegisterOrganizerRequest(RegisterStudentRequest):
+    pass
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=255)
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(..., alias="refreshToken", min_length=10)
+
+    model_config = {
+        "populate_by_name": True
+    }
+
+
+class LogoutRequest(RefreshTokenRequest):
+    pass
+
+
+class UpdateMeRequest(BaseModel):
+    full_name: str | None = Field(default=None, alias="fullName", min_length=1, max_length=255)
+    profile_image_url: str | None = Field(default=None, alias="profileImageUrl", max_length=500)
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("fullName is required")
+        return value
+
+    model_config = {
+        "populate_by_name": True
+    }
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str = Field(..., alias="oldPassword", min_length=8, max_length=255)
+    new_password: str = Field(..., alias="newPassword", min_length=8, max_length=255)
+    confirm_new_password: str = Field(..., alias="confirmNewPassword", min_length=8, max_length=255)
+
+    model_config = {
+        "populate_by_name": True
+    }
+
+
 class StudentResponseData(BaseModel):
     user_id: int = Field(..., alias="userId")
     full_name: str = Field(..., alias="fullName")
