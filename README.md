@@ -10,6 +10,7 @@
 - API ตรวจสถานะระบบ (`health`)
 - API สมัครสมาชิกนักศึกษา
 - API ยืนยันตัวตน (Auth) ครบชุดเบื้องต้น
+- API หมวดหมู่กิจกรรม (Categories) ครบชุดพื้นฐาน
 - โครงคลาส UML (Skeleton Phase) ครบชุดใน `app/domain`
 - สคริปต์ seed ข้อมูลตัวอย่าง
 - ชุดทดสอบเบื้องต้น
@@ -170,6 +171,27 @@ make seed
 - GET /api/v1/auth/me
 - PATCH /api/v1/auth/me
 - POST /api/v1/auth/change-password
+
+## Category APIs ที่ทำแล้ว
+
+- GET /api/v1/categories
+	- Public
+	- query: `includeInactive=true|false` (default เป็น `false`)
+- POST /api/v1/categories
+	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
+- GET /api/v1/categories/{categoryId}
+	- Public
+- PATCH /api/v1/categories/{categoryId}
+	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
+- DELETE /api/v1/categories/{categoryId}
+	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
+	- เป็น soft delete (`isActive = false`)
+
+หมายเหตุ:
+- ชื่อหมวดหมู่ห้ามซ้ำ (ตรวจแบบไม่สนตัวพิมพ์เล็ก/ใหญ่)
+- ถ้า query `includeInactive` ไม่ถูกต้อง จะตอบ `400`
+- ถ้าไม่มีสิทธิ์ จะตอบ `403`
+- ถ้าไม่พบหมวดหมู่ จะตอบ `404`
 
 ## UML Mapping Status (Auth รอบล่าสุด)
 
