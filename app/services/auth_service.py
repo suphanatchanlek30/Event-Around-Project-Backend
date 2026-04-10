@@ -2,6 +2,9 @@
 
 from sqlalchemy.orm import Session
 
+from app.domain.auth_manager import AuthManager
+from app.domain.organizer import Organizer
+from app.domain.student import Student
 from app.core.exceptions import bad_request, conflict, forbidden, unauthorized
 from app.core.security import (
     create_access_token,
@@ -29,6 +32,23 @@ class AuthService:
         self.db = db
         self.user_repo = UserRepository(db)
         self.refresh_token_repo = RefreshTokenRepository(db)
+        self.auth_manager = AuthManager()
+
+    def _to_domain_user(self, user: User) -> Student | Organizer:
+        if user.role == "ORGANIZER":
+            return Organizer(
+                user_id=user.id,
+                name=user.full_name,
+                email=user.email,
+                password_hash=user.password_hash,
+            )
+
+        return Student(
+            user_id=user.id,
+            name=user.full_name,
+            email=user.email,
+            password_hash=user.password_hash,
+        )
 
     def _validate_password_confirmation(self, password: str, confirm_password: str, field_name: str) -> None:
         if password != confirm_password:
@@ -45,7 +65,9 @@ class AuthService:
 
     def _ensure_email_unique(self, email: str) -> None:
         existing_user = self.user_repo.get_by_email(email)
-        if existing_user:
+        domain_users = [self._to_domain_user(existing_user)] if existing_user is not None else []
+        self.auth_manager.set_users(domain_users)
+        if not self.auth_manager.is_email_unique(email):
             raise conflict(
                 message="อีเมลนี้ถูกใช้งานแล้ว",
                 errors=[
@@ -89,10 +111,17 @@ class AuthService:
 
         password_hash = get_password_hash(payload.password)
 
-        user = self.user_repo.create_student(
+        domain_user = self.auth_manager.register_student(
+            name=payload.full_name,
+            email=payload.email,
+            password=password_hash,
+        )
+
+        user = self.user_repo.create_user(
             full_name=payload.full_name,
             email=payload.email,
             password_hash=password_hash,
+            role=domain_user.get_role(),
         )
 
         return {
@@ -102,7 +131,7 @@ class AuthService:
                 "userId": user.id,
                 "fullName": user.full_name,
                 "email": user.email,
-                "role": user.role,
+                "role": domain_user.get_role(),
             },
         }
 
@@ -112,10 +141,17 @@ class AuthService:
 
         password_hash = get_password_hash(payload.password)
 
-        user = self.user_repo.create_organizer(
+        domain_user = self.auth_manager.register_organizer(
+            name=payload.full_name,
+            email=payload.email,
+            password=password_hash,
+        )
+
+        user = self.user_repo.create_user(
             full_name=payload.full_name,
             email=payload.email,
             password_hash=password_hash,
+            role=domain_user.get_role(),
         )
 
         return {
@@ -125,13 +161,33 @@ class AuthService:
                 "userId": user.id,
                 "fullName": user.full_name,
                 "email": user.email,
-                "role": user.role,
+                "role": domain_user.get_role(),
             },
         }
 
     def login(self, payload: LoginRequest):
         user = self.user_repo.get_by_email(payload.email)
-        if user is None or not verify_password(payload.password, user.password_hash):
+        if user is None:
+            raise unauthorized(
+                message="อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "email",
+                        "code": "INVALID_CREDENTIALS",
+                        "detail": "ไม่สามารถเข้าสู่ระบบด้วยข้อมูลนี้ได้",
+                    }
+                ],
+            )
+
+        domain_user = self._to_domain_user(user)
+        self.auth_manager.set_users([domain_user])
+        try:
+            self.auth_manager.login(
+                payload.email,
+                payload.password,
+                password_verifier=lambda _domain_user, plain_password: verify_password(plain_password, user.password_hash),
+            )
+        except ValueError:
             raise unauthorized(
                 message="อีเมลหรือรหัสผ่านไม่ถูกต้อง",
                 errors=[
