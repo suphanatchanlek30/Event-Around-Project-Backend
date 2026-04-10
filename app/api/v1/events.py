@@ -2,8 +2,13 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_optional_current_user
+from app.core.security import get_current_user, get_optional_current_user
 from app.models.user import User
+from app.schemas.event import (
+    EventCancelRequest,
+    EventCreateRequest,
+    EventUpdateRequest,
+)
 from app.services.event_service import EventService
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -34,6 +39,58 @@ def list_events(
         sort_by=sort_by,
         sort_order=sort_order,
     )
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create_event(
+    payload: EventCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.create_event(payload, current_user)
+
+
+@router.patch("/{event_id}", status_code=status.HTTP_200_OK)
+def update_event(
+    event_id: int,
+    payload: EventUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.update_event(event_id=event_id, payload=payload, current_user=current_user)
+
+
+@router.delete("/{event_id}", status_code=status.HTTP_200_OK)
+def delete_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.delete_event(event_id=event_id, current_user=current_user)
+
+
+@router.post("/{event_id}/publish", status_code=status.HTTP_200_OK)
+def publish_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.publish_event(event_id=event_id, current_user=current_user)
+
+
+@router.post("/{event_id}/cancel", status_code=status.HTTP_200_OK)
+def cancel_event(
+    event_id: int,
+    payload: EventCancelRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.cancel_event(event_id=event_id, payload=payload, current_user=current_user)
 
 
 @router.get("/{event_id}", status_code=status.HTTP_200_OK)

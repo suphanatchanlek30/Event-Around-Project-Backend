@@ -204,10 +204,31 @@ make seed
 	- Public
 	- query: `page`, `pageSize`, `search`, `categoryId`, `status`, `startFrom`, `endTo`, `sortBy`, `sortOrder`
 	- Default แสดงเฉพาะ `PUBLISHED`
+- POST /api/v1/events
+	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
+	- Organizer สร้างได้เป็น `DRAFT`
+	- Admin สามารถสร้างได้ทั้ง `DRAFT` หรือ `PUBLISHED`
+- PATCH /api/v1/events/{eventId}
+	- ต้องเป็นเจ้าของกิจกรรม (`ORGANIZER` ที่เป็น organizer ของ event)
+- DELETE /api/v1/events/{eventId}
+	- ต้องเป็นเจ้าของกิจกรรม (`ORGANIZER` ที่เป็น organizer ของ event)
+- POST /api/v1/events/{eventId}/publish
+	- ต้องเป็น `ADMIN`
+	- ตรวจสอบข้อมูลครบก่อนเปลี่ยนเป็น `PUBLISHED`
+- POST /api/v1/events/{eventId}/cancel
+	- ต้องเป็น `ADMIN` หรือเจ้าของกิจกรรม
+	- บันทึกเหตุผลการยกเลิก
 - GET /api/v1/events/{eventId}
 	- Public
 	- ถ้า `event` อยู่ในสถานะอื่นที่ไม่ใช่ `PUBLISHED` จะต้องเป็น `ADMIN` หรือ `ORGANIZER` เท่านั้น
 	- `isSaved` จะคืนค่าเฉพาะสำหรับผู้ใช้ที่ล็อกอินเป็น `STUDENT`
+
+### แนวคิดการทำงานของ Event APIs
+- ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้
+- `ADMIN` สามารถสร้างกิจกรรมเป็น `PUBLISHED` ได้โดยตรง หรืออนุมัติกิจกรรม `DRAFT` ให้เป็น `PUBLISHED`
+- เจ้าของกิจกรรม (Organizer) สามารถแก้ไขหรือลบกิจกรรมของตัวเองได้
+- `ADMIN` และเจ้าของกิจกรรมสามารถยกเลิกกิจกรรม พร้อมบันทึกเหตุผลการยกเลิก
+- กิจกรรมที่ยังเป็น `DRAFT` จะไม่แสดงในรายการสาธารณะจนกว่าจะถูกเผยแพร่
 
 หมายเหตุ:
 - ชื่อหมวดหมู่ห้ามซ้ำ (ตรวจแบบไม่สนตัวพิมพ์เล็ก/ใหญ่)

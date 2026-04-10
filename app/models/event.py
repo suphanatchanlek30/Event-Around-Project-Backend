@@ -22,6 +22,7 @@ class Event(Base):
     organizer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     short_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cover_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cancel_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

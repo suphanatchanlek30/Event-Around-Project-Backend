@@ -79,12 +79,15 @@ def create_event(
     status: str = "PUBLISHED",
     location_name: str = "SCI Building Room 501",
     description: str | None = None,
+    short_description: str | None = None,
+    cover_image_url: str | None = None,
 ) -> Event:
     db = TestingSessionLocal()
     try:
         event = Event(
             title=title,
             description=description,
+            short_description=short_description,
             location_name=location_name,
             latitude=14.87,
             longitude=102.01,
@@ -93,6 +96,7 @@ def create_event(
             status=status,
             category_id=category_id,
             organizer_id=organizer_id,
+            cover_image_url=cover_image_url,
         )
         db.add(event)
         db.commit()
@@ -229,6 +233,190 @@ def test_get_event_detail_unpublished_returns_404_for_anonymous():
 
     assert response.status_code == 404
     assert response.json()["success"] is False
+
+
+def test_create_event_as_organizer_saves_as_draft():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_create@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+
+    payload = {
+        "title": "Python Workshop",
+        "description": "เวิร์กชอป Python เบื้องต้น",
+        "shortDescription": "ลงมือทำจริง",
+        "locationName": "SCI Building Room 501",
+        "latitude": 15.120245,
+        "longitude": 104.906928,
+        "startTime": "2026-04-10T09:00:00+07:00",
+        "endTime": "2026-04-10T12:00:00+07:00",
+        "categoryId": category.id,
+        "coverImageUrl": "https://example.com/python.jpg",
+        "status": "DRAFT",
+    }
+    token = create_access_token_for_user(organizer)
+
+    response = client.post(
+        "/api/v1/events",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["status"] == "DRAFT"
+    assert body["data"]["categoryId"] == category.id
+
+
+def test_organizer_owner_can_update_event():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_update@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+    event = create_event(
+        title="Python Workshop",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=timezone.utc),
+        status="DRAFT",
+    )
+    token = create_access_token_for_user(organizer)
+
+    response = client.patch(
+        f"/api/v1/events/{event.id}",
+        json={
+            "title": "Python Workshop Updated",
+            "locationName": "SCI Building Room 502",
+            "latitude": 15.120300,
+            "longitude": 104.907000,
+            "startTime": "2026-04-10T10:00:00+07:00",
+            "endTime": "2026-04-10T13:00:00+07:00",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["eventId"] == event.id
+    assert body["data"]["title"] == "Python Workshop Updated"
+    assert body["data"]["locationName"] == "SCI Building Room 502"
+    assert body["data"]["status"] == "DRAFT"
+
+
+def test_admin_can_update_any_event():
+    client = TestClient(app)
+    admin = create_user("ADMIN", "admin_update@events.com")
+    organizer = create_user("ORGANIZER", "org_update2@events.com")
+    category = create_category("Seminar", "กิจกรรมสัมมนา")
+    event = create_event(
+        title="Organizer Event",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 5, 10, 9, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 5, 10, 12, 0, tzinfo=timezone.utc),
+        status="DRAFT",
+    )
+    token = create_access_token_for_user(admin)
+
+    response = client.patch(
+        f"/api/v1/events/{event.id}",
+        json={
+            "title": "Admin Updated Title",
+            "locationName": "Main Hall",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["eventId"] == event.id
+    assert body["data"]["title"] == "Admin Updated Title"
+    assert body["data"]["locationName"] == "Main Hall"
+    assert body["data"]["status"] == "DRAFT"
+
+
+def test_organizer_cannot_create_published_event():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_publish_denied@events.com")
+    category = create_category("Seminar", "กิจกรรมสัมมนา")
+
+    payload = {
+        "title": "Restricted Publish",
+        "locationName": "SCI Building Room 501",
+        "latitude": 15.120245,
+        "longitude": 104.906928,
+        "startTime": "2026-04-10T09:00:00+07:00",
+        "endTime": "2026-04-10T12:00:00+07:00",
+        "categoryId": category.id,
+        "status": "PUBLISHED",
+    }
+    token = create_access_token_for_user(organizer)
+
+    response = client.post(
+        "/api/v1/events",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_admin_can_publish_draft_event():
+    client = TestClient(app)
+    admin = create_user("ADMIN", "admin_publish@events.com")
+    organizer = create_user("ORGANIZER", "org_publish@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+
+    event = create_event(
+        title="Draft Workshop",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 8, 1, 9, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc),
+        status="DRAFT",
+    )
+    token = create_access_token_for_user(admin)
+
+    response = client.post(
+        f"/api/v1/events/{event.id}/publish",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["status"] == "PUBLISHED"
+
+
+def test_admin_can_cancel_event_with_reason():
+    client = TestClient(app)
+    admin = create_user("ADMIN", "admin_cancel@events.com")
+    organizer = create_user("ORGANIZER", "org_cancel@events.com")
+    category = create_category("Seminar", "กิจกรรมสัมมนา")
+
+    event = create_event(
+        title="Cancelable Event",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 9, 1, 9, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc),
+        status="PUBLISHED",
+    )
+    token = create_access_token_for_user(admin)
+
+    response = client.post(
+        f"/api/v1/events/{event.id}/cancel",
+        json={"reason": "เลื่อนสถานที่จัดงาน"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["status"] == "CANCELLED"
+    assert body["data"]["reason"] == "เลื่อนสถานที่จัดงาน"
 
 
 def test_list_events_filters_search_category_date_and_sort():

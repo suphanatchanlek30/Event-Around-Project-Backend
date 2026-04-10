@@ -503,7 +503,166 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
-#### **1️⃣6️⃣ Events: Detail (Public)**
+#### **1️⃣6️⃣ Events: Create (ORGANIZER / ADMIN)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/events`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "title": "Python Workshop",
+  "description": "เวิร์กชอป Python เบื้องต้น",
+  "shortDescription": "ลงมือทำจริง",
+  "locationName": "SCI Building Room 501",
+  "latitude": 15.120245,
+  "longitude": 104.906928,
+  "startTime": "2026-04-10T09:00:00+07:00",
+  "endTime": "2026-04-10T12:00:00+07:00",
+  "categoryId": 3,
+  "coverImageUrl": "https://example.com/python.jpg",
+  "status": "DRAFT"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "สร้างกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "title": "Python Workshop",
+    "status": "DRAFT",
+    "categoryId": 3,
+    "organizerId": 20
+  }
+}
+```
+
+---
+
+#### **1️⃣7️⃣ Events: Update (Organizer Owner)**
+
+**Method:** PATCH  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "title": "Python Workshop Updated",
+  "locationName": "SCI Building Room 502",
+  "latitude": 15.120300,
+  "longitude": 104.907000,
+  "startTime": "2026-04-10T10:00:00+07:00",
+  "endTime": "2026-04-10T13:00:00+07:00"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "แก้ไขกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "title": "Python Workshop Updated",
+    "locationName": "SCI Building Room 502",
+    "status": "DRAFT"
+  }
+}
+```
+
+---
+
+#### **1️⃣8️⃣ Events: Delete (Organizer Owner)**
+
+**Method:** DELETE  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ลบกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "deleted": true
+  }
+}
+```
+
+---
+
+#### **1️⃣9️⃣ Events: Publish (ADMIN only)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001/publish`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "เผยแพร่กิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "status": "PUBLISHED"
+  }
+}
+```
+
+---
+
+#### **2️⃣0️⃣ Events: Cancel (ADMIN or Organizer Owner)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001/cancel`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "reason": "เลื่อนสถานที่จัดงาน"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ยกเลิกกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "status": "CANCELLED",
+    "reason": "เลื่อนสถานที่จัดงาน"
+  }
+}
+```
+
+---
+
+#### **2️⃣1️⃣ Events: Detail (Public)**
 
 **Method:** GET  
 **URL:** `http://127.0.0.1:8000/api/v1/events/1001`  

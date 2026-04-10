@@ -3,14 +3,16 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import bad_request, forbidden, not_found
+from app.core.exceptions import bad_request, conflict, forbidden, not_found
 from app.domain.event import Event as DomainEvent
 from app.domain.event_category import EventCategory as DomainEventCategory
 from app.domain.event_manager import EventManager
+from app.domain.location_service import LocationService
 from app.domain.organizer import Organizer
 from app.domain.student import Student
 from app.models.event import Event
 from app.models.user import User
+from app.repositories.category_repository import CategoryRepository
 from app.repositories.event_repository import EventRepository
 
 
@@ -128,6 +130,105 @@ class EventService:
 
         return parsed
 
+    def _parse_event_status(self, status: str | None, current_user: User) -> str:
+        if status is None:
+            return "DRAFT"
+
+        normalized = status.strip().upper()
+        if normalized not in {"DRAFT", "PUBLISHED"}:
+            raise bad_request(
+                message="ข้อมูลไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "status",
+                        "code": "INVALID_STATUS",
+                        "detail": "status ต้องเป็น DRAFT หรือ PUBLISHED",
+                    }
+                ],
+            )
+
+        if normalized == "PUBLISHED" and current_user.role != "ADMIN":
+            raise forbidden("เฉพาะ ADMIN เท่านั้นที่สามารถสร้างกิจกรรมเป็น PUBLISHED ได้")
+
+        return normalized
+
+    def _validate_coordinates(self, latitude: float, longitude: float) -> None:
+        if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+            raise bad_request(
+                message="ข้อมูลพิกัดไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "latitude/longitude",
+                        "code": "INVALID_COORDINATES",
+                        "detail": "latitude ต้องอยู่ระหว่าง -90 ถึง 90 และ longitude ต้องอยู่ระหว่าง -180 ถึง 180",
+                    }
+                ],
+            )
+
+    def _ensure_category_exists(self, category_id: int):
+        category = CategoryRepository(self.db).get_by_id(category_id)
+        if category is None:
+            raise not_found("ไม่พบหมวดหมู่ที่ต้องการ")
+        return category
+
+    def _ensure_event_owner(self, event: Event, current_user: User) -> None:
+        if current_user.role == "ADMIN":
+            return
+
+        if current_user.role == "ORGANIZER" and event.organizer_id == current_user.id:
+            return
+
+        raise forbidden("ไม่มีสิทธิ์แก้ไขกิจกรรมนี้")
+
+    def _ensure_admin(self, current_user: User) -> None:
+        if current_user.role != "ADMIN":
+            raise forbidden("เฉพาะ ADMIN เท่านั้นที่สามารถดำเนินการนี้ได้")
+
+    def _ensure_publishable(self, event: Event) -> None:
+        required_fields = [
+            ("title", event.title),
+            ("locationName", event.location_name),
+            ("startTime", event.start_time),
+            ("endTime", event.end_time),
+            ("categoryId", event.category_id),
+        ]
+        missing = [field for field, value in required_fields if value is None or (isinstance(value, str) and value.strip() == "")]
+        if missing:
+            raise bad_request(
+                message="ข้อมูลกิจกรรมไม่ครบ",
+                errors=[
+                    {
+                        "field": ", ".join(missing),
+                        "code": "INCOMPLETE_EVENT_DATA",
+                        "detail": "กิจกรรมต้องมี title, locationName, startTime, endTime และ categoryId ก่อนเผยแพร่",
+                    }
+                ],
+            )
+
+        if event.start_time is None or event.end_time is None or event.start_time >= event.end_time:
+            raise bad_request(
+                message="ช่วงเวลาของกิจกรรมไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "startTime/endTime",
+                        "code": "INVALID_TIME_RANGE",
+                        "detail": "startTime ต้องน้อยกว่า endTime",
+                    }
+                ],
+            )
+
+        if not LocationService().validate_coordinates(event.latitude, event.longitude):
+            raise bad_request(
+                message="ข้อมูลพิกัดไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "latitude/longitude",
+                        "code": "INVALID_COORDINATES",
+                        "detail": "latitude ต้องอยู่ระหว่าง -90 ถึง 90 และ longitude ต้องอยู่ระหว่าง -180 ถึง 180",
+                    }
+                ],
+            )
+
     def _to_domain_event(self, event: Event) -> DomainEvent:
         domain_category = DomainEventCategory(
             category_id=event.category.id,
@@ -231,6 +332,246 @@ class EventService:
             "success": True,
             "message": "ดึงรายละเอียดกิจกรรมสำเร็จ",
             "data": self._to_detail_response(domain_event, saved_count, is_saved),
+        }
+
+    def create_event(self, payload, current_user: User) -> dict:
+        self._ensure_admin_or_organizer(current_user)
+        status = self._parse_event_status(payload.status, current_user)
+        self._validate_coordinates(payload.latitude, payload.longitude)
+        self._ensure_category_exists(payload.category_id)
+
+        if not payload.start_time or not payload.end_time:
+            raise bad_request(
+                message="ข้อมูลกิจกรรมไม่ครบ",
+                errors=[
+                    {
+                        "field": "startTime/endTime",
+                        "code": "MISSING_TIME_RANGE",
+                        "detail": "ต้องระบุ startTime และ endTime",
+                    }
+                ],
+            )
+
+        if payload.start_time >= payload.end_time:
+            raise bad_request(
+                message="ช่วงเวลาของกิจกรรมไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "startTime/endTime",
+                        "code": "INVALID_TIME_RANGE",
+                        "detail": "startTime ต้องน้อยกว่า endTime",
+                    }
+                ],
+            )
+
+        event = self.event_repo.create(
+            title=payload.title,
+            description=payload.description,
+            short_description=payload.short_description,
+            location_name=payload.location_name,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            start_time=payload.start_time,
+            end_time=payload.end_time,
+            status=status,
+            category_id=payload.category_id,
+            organizer_id=current_user.id,
+            cover_image_url=payload.cover_image_url,
+        )
+
+        return {
+            "success": True,
+            "message": "สร้างกิจกรรมสำเร็จ",
+            "data": {
+                "eventId": event.id,
+                "title": event.title,
+                "status": event.status,
+                "categoryId": event.category_id,
+                "organizerId": event.organizer_id,
+            },
+        }
+
+    def _ensure_admin_or_organizer(self, current_user: User) -> None:
+        if current_user.role not in {"ADMIN", "ORGANIZER"}:
+            raise forbidden("ไม่มีสิทธิ์จัดการกิจกรรม")
+
+    def update_event(self, event_id: int, payload, current_user: User) -> dict:
+        event = self.event_repo.get_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรมที่ต้องการ")
+
+        self._ensure_event_owner(event, current_user)
+
+        if payload.title is None and payload.description is None and payload.short_description is None and payload.location_name is None and payload.latitude is None and payload.longitude is None and payload.start_time is None and payload.end_time is None and payload.category_id is None and payload.cover_image_url is None:
+            raise bad_request(
+                message="ข้อมูลไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "body",
+                        "code": "EMPTY_UPDATE_PAYLOAD",
+                        "detail": "ต้องระบุฟิลด์อย่างน้อย 1 ตัวเพื่อแก้ไขกิจกรรม",
+                    }
+                ],
+            )
+
+        if payload.category_id is not None:
+            self._ensure_category_exists(payload.category_id)
+            event.category_id = payload.category_id
+
+        if payload.title is not None:
+            event.title = payload.title
+        if payload.description is not None:
+            event.description = payload.description
+        if payload.short_description is not None:
+            event.short_description = payload.short_description
+        if payload.cover_image_url is not None:
+            event.cover_image_url = payload.cover_image_url
+        if payload.location_name is not None:
+            event.location_name = payload.location_name
+        if payload.latitude is not None:
+            event.latitude = payload.latitude
+        if payload.longitude is not None:
+            event.longitude = payload.longitude
+        if payload.start_time is not None:
+            event.start_time = payload.start_time
+        if payload.end_time is not None:
+            event.end_time = payload.end_time
+
+        if event.latitude is not None and event.longitude is not None:
+            self._validate_coordinates(event.latitude, event.longitude)
+
+        if event.start_time is not None and event.end_time is not None and event.start_time >= event.end_time:
+            raise bad_request(
+                message="ช่วงเวลาของกิจกรรมไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "startTime/endTime",
+                        "code": "INVALID_TIME_RANGE",
+                        "detail": "startTime ต้องน้อยกว่า endTime",
+                    }
+                ],
+            )
+
+        updated_event = self.event_repo.save(event)
+
+        return {
+            "success": True,
+            "message": "แก้ไขกิจกรรมสำเร็จ",
+            "data": {
+                "eventId": updated_event.id,
+                "title": updated_event.title,
+                "locationName": updated_event.location_name,
+                "status": updated_event.status,
+            },
+        }
+
+    def delete_event(self, event_id: int, current_user: User) -> dict:
+        event = self.event_repo.get_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรมที่ต้องการ")
+
+        self._ensure_event_owner(event, current_user)
+        self.event_repo.delete(event)
+
+        return {
+            "success": True,
+            "message": "ลบกิจกรรมสำเร็จ",
+            "data": {
+                "eventId": event_id,
+                "deleted": True,
+            },
+        }
+
+    def publish_event(self, event_id: int, current_user: User) -> dict:
+        self._ensure_admin(current_user)
+
+        event = self.event_repo.get_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรมที่ต้องการ")
+
+        if event.status == "PUBLISHED":
+            raise conflict(
+                message="สถานะกิจกรรมไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "status",
+                        "code": "ALREADY_PUBLISHED",
+                        "detail": "กิจกรรมเผยแพร่แล้ว",
+                    }
+                ],
+            )
+
+        if event.status == "CANCELLED":
+            raise conflict(
+                message="ไม่สามารถเผยแพร่กิจกรรมที่ถูกยกเลิกแล้ว",
+                errors=[
+                    {
+                        "field": "status",
+                        "code": "INVALID_STATE_TRANSITION",
+                        "detail": "กิจกรรมที่ถูกยกเลิกไม่สามารถเผยแพร่ได้",
+                    }
+                ],
+            )
+
+        self._ensure_publishable(event)
+        event.status = "PUBLISHED"
+        updated_event = self.event_repo.save(event)
+
+        return {
+            "success": True,
+            "message": "เผยแพร่กิจกรรมสำเร็จ",
+            "data": {
+                "eventId": updated_event.id,
+                "status": updated_event.status,
+            },
+        }
+
+    def cancel_event(self, event_id: int, payload, current_user: User) -> dict:
+        event = self.event_repo.get_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรมที่ต้องการ")
+
+        if current_user.role == "ORGANIZER":
+            self._ensure_event_owner(event, current_user)
+        elif current_user.role != "ADMIN":
+            raise forbidden("ไม่มีสิทธิ์ยกเลิกกิจกรรมนี้")
+
+        if not payload.reason.strip():
+            raise bad_request(
+                message="ข้อมูลไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "reason",
+                        "code": "INVALID_REASON",
+                        "detail": "reason ต้องไม่ว่าง",
+                    }
+                ],
+            )
+
+        if event.status == "CANCELLED":
+            raise conflict(
+                message="สถานะกิจกรรมไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "status",
+                        "code": "ALREADY_CANCELLED",
+                        "detail": "กิจกรรมถูกยกเลิกแล้ว",
+                    }
+                ],
+            )
+
+        event.status = "CANCELLED"
+        event.cancel_reason = payload.reason
+        updated_event = self.event_repo.save(event)
+
+        return {
+            "success": True,
+            "message": "ยกเลิกกิจกรรมสำเร็จ",
+            "data": {
+                "eventId": updated_event.id,
+                "status": updated_event.status,
+                "reason": updated_event.cancel_reason,
+            },
         }
 
     def list_events(
