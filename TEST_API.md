@@ -460,6 +460,49 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **1️⃣5️⃣ Events: List (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายการกิจกรรมสำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "locationName": "SCI Building Room 501",
+      "startTime": "2026-04-10T09:00:00+00:00",
+      "endTime": "2026-04-10T12:00:00+00:00",
+      "status": "PUBLISHED",
+      "category": {
+        "categoryId": 3,
+        "name": "Workshop"
+      },
+      "organizer": {
+        "userId": 20,
+        "fullName": "Computer Science Club"
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+ต้องการกรอง/ค้นหา/จัดเรียงให้ใส่ query string เช่น:
+`GET /api/v1/events?search=python&categoryId=3&status=PUBLISHED&startFrom=2026-04-01T00:00:00Z&endTo=2026-04-30T23:59:59Z&sortBy=startTime&sortOrder=asc`
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**

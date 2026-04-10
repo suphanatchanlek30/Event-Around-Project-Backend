@@ -47,6 +47,27 @@ class Event:
     def set_description(self, description: str) -> None:
         self._description = description
 
+    def get_location_name(self) -> str:
+        return self._location_name
+
+    def get_latitude(self) -> float:
+        return self._latitude
+
+    def get_longitude(self) -> float:
+        return self._longitude
+
+    def get_start_time(self) -> datetime:
+        return self._start_time
+
+    def set_start_time(self, start_time: datetime) -> None:
+        self._start_time = start_time
+
+    def get_end_time(self) -> datetime:
+        return self._end_time
+
+    def set_end_time(self, end_time: datetime) -> None:
+        self._end_time = end_time
+
     def get_status(self) -> str:
         return self._status
 
@@ -56,14 +77,23 @@ class Event:
     def get_category(self) -> EventCategory:
         return self._category
 
+    def get_organizer(self) -> Organizer:
+        return self._organizer
+
     def set_category(self, category: EventCategory) -> None:
         self._category = category
 
     def is_active(self, current_time: datetime) -> bool:
-        raise NotImplementedError("is_active is not implemented in skeleton phase.")
+        return (
+            self._status == "PUBLISHED"
+            and self._start_time <= current_time
+            and current_time <= self._end_time
+        )
 
     def validate_time_range(self) -> bool:
-        raise NotImplementedError("validate_time_range is not implemented in skeleton phase.")
+        return self._start_time < self._end_time
 
     def update_location(self, location_name: str, latitude: float, longitude: float) -> None:
-        raise NotImplementedError("update_location is not implemented in skeleton phase.")
+        self._location_name = location_name
+        self._latitude = latitude
+        self._longitude = longitude

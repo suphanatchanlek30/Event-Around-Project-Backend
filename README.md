@@ -200,13 +200,16 @@ make seed
 	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
 	- เป็น soft delete (`isActive = false`)
 
+- GET /api/v1/events
+	- Public
+	- query: `page`, `pageSize`, `search`, `categoryId`, `status`, `startFrom`, `endTo`, `sortBy`, `sortOrder`
+	- Default แสดงเฉพาะ `PUBLISHED`
+
 หมายเหตุ:
 - ชื่อหมวดหมู่ห้ามซ้ำ (ตรวจแบบไม่สนตัวพิมพ์เล็ก/ใหญ่)
 - ถ้า query `includeInactive` ไม่ถูกต้อง จะตอบ `400`
 - ถ้าไม่มีสิทธิ์ จะตอบ `403`
 - ถ้าไม่พบหมวดหมู่ จะตอบ `404`
-
-## UML Mapping Status (Auth รอบล่าสุด)
 
 - `AuthService` เริ่ม delegate บาง business flow ไปที่ `app/domain/AuthManager` แล้ว
 - `register_student` และ `register_organizer` ใช้ `AuthManager.register_student()` / `AuthManager.register_organizer()` เพื่อกำหนด role จาก domain
