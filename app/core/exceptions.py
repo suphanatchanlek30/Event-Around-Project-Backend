@@ -45,3 +45,14 @@ def forbidden(message: str, errors: list | None = None) -> HTTPException:
             "errors": errors or [],
         },
     )
+
+
+def not_found(message: str, errors: list | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail={
+            "success": False,
+            "message": message,
+            "errors": errors or [],
+        },
+    )

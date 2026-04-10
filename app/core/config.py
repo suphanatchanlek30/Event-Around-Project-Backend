@@ -13,9 +13,9 @@ class Settings(BaseSettings):
     postgres_password: str = "event_pass"
     postgres_db: str = "event_around_db"
     postgres_host: str = "localhost"
-    postgres_port: int = 5432
+    postgres_port: int = 5435
 
-    database_url: str = "postgresql+psycopg://event_user:event_pass@localhost:5432/event_around_db"
+    database_url: str = "postgresql+psycopg://event_user:event_pass@localhost:5435/event_around_db"
 
     jwt_secret_key: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"

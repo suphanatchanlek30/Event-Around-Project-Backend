@@ -8,6 +8,7 @@
 - คลาสตาม UML ถูกสร้างไว้ครบชุดที่ `app/domain` แล้ว
 - เมธอดในคลาส domain ส่วนใหญ่ยังเป็น `NotImplementedError` เพื่อรอเติม logic ตอนทำ API รอบถัดไป
 - API ที่ทดสอบได้ตอนนี้เน้นกลุ่ม Auth และ Health ตามรายการด้านล่าง
+- API ที่ทดสอบได้ตอนนี้เน้นกลุ่ม Auth, Health และ Categories ตามรายการด้านล่าง
 - Auth ผ่านรอบ refactor ให้สอดคล้อง UML มากขึ้น โดยไม่เปลี่ยน request/response contract
 
 ## 1) รัน API
@@ -317,6 +318,148 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **🔟 Categories: List (Active Only by default)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/categories`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงหมวดหมู่สำเร็จ",
+  "data": [
+    {
+      "categoryId": 1,
+      "name": "Academic",
+      "description": "กิจกรรมเชิงวิชาการ",
+      "isActive": true
+    }
+  ]
+}
+```
+
+ต้องการดึงทุกหมวดรวม inactive:
+
+`GET /api/v1/categories?includeInactive=true`
+
+---
+
+#### **1️⃣1️⃣ Categories: Create (ADMIN / ORGANIZER)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/categories`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Content-Type:** application/json  
+**Body:**
+
+```json
+{
+  "name": "Hackathon",
+  "description": "กิจกรรมการแข่งขันพัฒนาโปรแกรม"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "สร้างหมวดหมู่สำเร็จ",
+  "data": {
+    "categoryId": 7,
+    "name": "Hackathon",
+    "description": "กิจกรรมการแข่งขันพัฒนาโปรแกรม",
+    "isActive": true
+  }
+}
+```
+
+---
+
+#### **1️⃣2️⃣ Categories: Get Detail**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/categories/1`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายละเอียดหมวดหมู่สำเร็จ",
+  "data": {
+    "categoryId": 1,
+    "name": "Academic",
+    "description": "กิจกรรมเชิงวิชาการ",
+    "isActive": true
+  }
+}
+```
+
+---
+
+#### **1️⃣3️⃣ Categories: Update (ADMIN / ORGANIZER)**
+
+**Method:** PATCH  
+**URL:** `http://127.0.0.1:8000/api/v1/categories/1`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Content-Type:** application/json  
+**Body:**
+
+```json
+{
+  "name": "Workshop Updated",
+  "description": "กิจกรรมฝึกปฏิบัติแบบลงมือทำ"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "แก้ไขหมวดหมู่สำเร็จ",
+  "data": {
+    "categoryId": 1,
+    "name": "Workshop Updated",
+    "description": "กิจกรรมฝึกปฏิบัติแบบลงมือทำ",
+    "isActive": true
+  }
+}
+```
+
+---
+
+#### **1️⃣4️⃣ Categories: Deactivate (Soft Delete)**
+
+**Method:** DELETE  
+**URL:** `http://127.0.0.1:8000/api/v1/categories/1`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ปิดใช้งานหมวดหมู่สำเร็จ",
+  "data": {
+    "categoryId": 1,
+    "isActive": false
+  }
+}
+```
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**
@@ -331,7 +474,8 @@ Authorization: Bearer {{accessToken}}
    - ครั้งต่อไป ใช้ `{{accessToken}}` และ `{{refreshToken}}` ได้เลย
 
 2. **ทดสอบตามลำดับ:**
-   - Health → Register → Login → Get Me → Update Me → Change Password → Refresh → Logout
+  - Health → Register → Login → Get Me → Update Me → Change Password → Refresh → Logout
+  - Categories List → Create → Get Detail → Update → Deactivate
 
 3. **Postman Collection (Optional):**
    - จัดเก็บ request ทีละชุด เพื่อรัน automation test ได้
@@ -352,9 +496,16 @@ python -m pytest -q
 python -m pytest tests/test_auth.py -q
 ```
 
+รันเฉพาะไฟล์ทดสอบ categories:
+
+```bash
+python -m pytest tests/test_categories.py -q
+```
+
 ไฟล์ทดสอบหลัก:
 - `tests/test_health.py`
 - `tests/test_auth.py`
+- `tests/test_categories.py`
 
 ## 4) คำสั่งปิดระบบ
 
