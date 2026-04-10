@@ -11,19 +11,20 @@ if TYPE_CHECKING:
 class Student(User):
     def __init__(self, user_id: int, name: str, email: str, password_hash: str):
         super().__init__(user_id=user_id, name=name, email=email, password_hash=password_hash)
-        self._saved_events: list = []
+        self._saved_events: list[int] = []
 
-    def get_saved_events(self) -> list:
+    def get_saved_events(self) -> list[int]:
         return self._saved_events
 
     def save_event(self, event: "Event") -> None:
-        raise NotImplementedError("save_event is not implemented in skeleton phase.")
+        if event.get_event_id() not in self._saved_events:
+            self._saved_events.append(event.get_event_id())
 
     def unsave_event(self, event: "Event") -> None:
-        raise NotImplementedError("unsave_event is not implemented in skeleton phase.")
+        self._saved_events = [saved_id for saved_id in self._saved_events if saved_id != event.get_event_id()]
 
     def has_saved_event(self, event: "Event") -> bool:
-        raise NotImplementedError("has_saved_event is not implemented in skeleton phase.")
+        return event.get_event_id() in self._saved_events
 
     def get_role(self) -> str:
         return "STUDENT"

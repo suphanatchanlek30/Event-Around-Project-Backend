@@ -3,12 +3,14 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import bad_request
+from app.core.exceptions import bad_request, forbidden, not_found
 from app.domain.event import Event as DomainEvent
 from app.domain.event_category import EventCategory as DomainEventCategory
 from app.domain.event_manager import EventManager
 from app.domain.organizer import Organizer
+from app.domain.student import Student
 from app.models.event import Event
+from app.models.user import User
 from app.repositories.event_repository import EventRepository
 
 
@@ -143,11 +145,13 @@ class EventService:
             event_id=event.id,
             title=event.title,
             description=event.description or "",
+            short_description=event.short_description,
             location_name=event.location_name,
             latitude=event.latitude,
             longitude=event.longitude,
             start_time=event.start_time,
             end_time=event.end_time,
+            cover_image_url=event.cover_image_url,
             category=domain_category,
             organizer=organizer,
         )
@@ -170,6 +174,63 @@ class EventService:
                 "userId": event.get_organizer().get_user_id(),
                 "fullName": event.get_organizer().get_name(),
             },
+        }
+
+    def _to_detail_response(self, event: DomainEvent, saved_count: int, is_saved: bool) -> dict:
+        return {
+            "eventId": event.get_event_id(),
+            "title": event.get_title(),
+            "description": event.get_description(),
+            "shortDescription": event.get_short_description(),
+            "locationName": event.get_location_name(),
+            "latitude": event.get_latitude(),
+            "longitude": event.get_longitude(),
+            "startTime": event.get_start_time(),
+            "endTime": event.get_end_time(),
+            "status": event.get_status(),
+            "coverImageUrl": event.get_cover_image_url(),
+            "category": {
+                "categoryId": event.get_category().get_category_id(),
+                "name": event.get_category().get_name(),
+            },
+            "organizer": {
+                "userId": event.get_organizer().get_user_id(),
+                "fullName": event.get_organizer().get_name(),
+            },
+            "savedCount": saved_count,
+            "isSaved": is_saved,
+        }
+
+    def _build_domain_student(self, user: User, saved_event_ids: list[int]) -> Student:
+        student = Student(
+            user_id=user.id,
+            name=user.full_name,
+            email=user.email,
+            password_hash=user.password_hash,
+        )
+        student._saved_events = saved_event_ids
+        return student
+
+    def get_event_detail(self, event_id: int, current_user: User | None = None) -> dict:
+        event = self.event_repo.get_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรมที่ต้องการ")
+
+        if event.status != "PUBLISHED":
+            if current_user is None or current_user.role not in {"ADMIN", "ORGANIZER"}:
+                raise not_found("ไม่พบกิจกรรมที่ต้องการ")
+
+        domain_event = self._to_domain_event(event)
+        saved_count = self.event_repo.count_saves(event.id)
+        is_saved = False
+        if current_user is not None and current_user.role == "STUDENT":
+            student = self._build_domain_student(current_user, self.event_repo.get_saved_event_ids(current_user.id))
+            is_saved = student.has_saved_event(domain_event)
+
+        return {
+            "success": True,
+            "message": "ดึงรายละเอียดกิจกรรมสำเร็จ",
+            "data": self._to_detail_response(domain_event, saved_count, is_saved),
         }
 
     def list_events(

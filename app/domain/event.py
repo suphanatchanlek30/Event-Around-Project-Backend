@@ -12,22 +12,26 @@ class Event:
         event_id: int,
         title: str,
         description: str,
+        short_description: str | None,
         location_name: str,
         latitude: float,
         longitude: float,
         start_time: datetime,
         end_time: datetime,
+        cover_image_url: str | None,
         category: EventCategory,
         organizer: Organizer,
     ):
         self._event_id = event_id
         self._title = title
         self._description = description
+        self._short_description = short_description
         self._location_name = location_name
         self._latitude = latitude
         self._longitude = longitude
         self._start_time = start_time
         self._end_time = end_time
+        self._cover_image_url = cover_image_url
         self._status = "DRAFT"
         self._category = category
         self._organizer = organizer
@@ -73,6 +77,12 @@ class Event:
 
     def set_status(self, status: str) -> None:
         self._status = status
+
+    def get_short_description(self) -> str | None:
+        return self._short_description
+
+    def get_cover_image_url(self) -> str | None:
+        return self._cover_image_url
 
     def get_category(self) -> EventCategory:
         return self._category

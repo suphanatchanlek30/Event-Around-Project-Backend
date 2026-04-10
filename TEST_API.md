@@ -503,6 +503,49 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **1️⃣6️⃣ Events: Detail (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายละเอียดกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "title": "Python Workshop",
+    "description": "A hands-on workshop",
+    "shortDescription": "เรียนรู้ Python",
+    "locationName": "SCI Building Room 501",
+    "latitude": 14.87,
+    "longitude": 102.01,
+    "startTime": "2026-04-10T09:00:00+00:00",
+    "endTime": "2026-04-10T12:00:00+00:00",
+    "status": "PUBLISHED",
+    "coverImageUrl": "https://example.com/workshop.jpg",
+    "category": {
+      "categoryId": 3,
+      "name": "Workshop"
+    },
+    "organizer": {
+      "userId": 20,
+      "fullName": "Computer Science Club"
+    },
+    "savedCount": 12,
+    "isSaved": true
+  }
+}
+```
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**

@@ -90,3 +90,22 @@ def get_current_user(
         raise forbidden("บัญชีผู้ใช้งานถูกปิดการใช้งาน")
 
     return user
+
+
+def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+):
+    if credentials is None:
+        return None
+
+    payload = decode_token(credentials.credentials, expected_type="access")
+    user_id = payload.get("sub")
+    if user_id is None:
+        return None
+
+    user = UserRepository(db).get_by_id(int(user_id))
+    if user is None or not user.is_active:
+        return None
+
+    return user
