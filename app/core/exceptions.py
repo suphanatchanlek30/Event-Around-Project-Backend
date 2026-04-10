@@ -23,3 +23,25 @@ def conflict(message: str, errors: list | None = None) -> HTTPException:
             "errors": errors or [],
         },
     )
+
+
+def unauthorized(message: str, errors: list | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "success": False,
+            "message": message,
+            "errors": errors or [],
+        },
+    )
+
+
+def forbidden(message: str, errors: list | None = None) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "success": False,
+            "message": message,
+            "errors": errors or [],
+        },
+    )
