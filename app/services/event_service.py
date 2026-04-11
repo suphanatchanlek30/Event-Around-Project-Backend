@@ -835,3 +835,207 @@ class EventService:
                 "totalPages": total_pages,
             },
         }
+
+    def get_nearby_events(
+        self,
+        latitude: float,
+        longitude: float,
+        radius_km: float,
+        search: str | None,
+        category_id: int | None,
+        page: int | None,
+        page_size: int | None,
+        sort_by: str | None,
+        sort_order: str | None,
+    ) -> dict:
+        location_service = LocationService()
+        
+        if not location_service.validate_coordinates(latitude, longitude):
+            raise bad_request(
+                message="ข้อมูลพิกัดไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "latitude/longitude",
+                        "code": "INVALID_COORDINATES",
+                        "detail": "latitude ต้องอยู่ระหว่าง -90 ถึง 90 และ longitude ต้องอยู่ระหว่าง -180 ถึง 180",
+                    }
+                ],
+            )
+        
+        if radius_km <= 0 or radius_km > 100:
+            raise bad_request(
+                message="ข้อมูลรัศมีไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "radiusKm",
+                        "code": "INVALID_RADIUS",
+                        "detail": "radiusKm ต้องมากกว่า 0 และไม่เกิน 100 กิโลเมตร",
+                    }
+                ],
+            )
+        
+        if category_id is not None:
+            self._ensure_category_exists(category_id)
+        
+        page_number = self._parse_page(page)
+        page_size_number = self._parse_page_size(page_size)
+        sort_by_field = self._parse_sort_by_nearby(sort_by)
+        sort_order_value = self._parse_sort_order(sort_order)
+        
+        query = self.event_repo.get_query()
+        query = query.filter(Event.status == "PUBLISHED")
+        
+        if search is not None:
+            query = query.filter(Event.title.ilike(f"%{search}%"))
+        
+        if category_id is not None:
+            query = query.filter(Event.category_id == category_id)
+        
+        orm_events = query.all()
+        
+        # Filter by distance
+        nearby_events = []
+        for orm_event in orm_events:
+            distance = location_service.calculate_distance(latitude, longitude, orm_event.latitude, orm_event.longitude)
+            if location_service.is_within_radius(distance, radius_km):
+                nearby_events.append((orm_event, distance))
+        
+        # Sort
+        if sort_by_field == "distance":
+            nearby_events.sort(key=lambda x: x[1], reverse=sort_order_value == "desc")
+        else:
+            # Default sort by startTime
+            nearby_events.sort(key=lambda x: x[0].start_time, reverse=sort_order_value == "desc")
+        
+        # Paginate
+        total_items = len(nearby_events)
+        total_pages = max(1, math.ceil(total_items / page_size_number))
+        start_index = (page_number - 1) * page_size_number
+        end_index = start_index + page_size_number
+        paged_events = nearby_events[start_index:end_index]
+        
+        # Build response
+        response_events = []
+        category_repo = CategoryRepository(self.db)
+        for orm_event, distance in paged_events:
+            category = category_repo.get_by_id(orm_event.category_id)
+            response_events.append({
+                "eventId": orm_event.id,
+                "title": orm_event.title,
+                "locationName": orm_event.location_name,
+                "latitude": orm_event.latitude,
+                "longitude": orm_event.longitude,
+                "distanceKm": round(distance, 2),
+                "startTime": orm_event.start_time.isoformat(),
+                "endTime": orm_event.end_time.isoformat(),
+                "category": {
+                    "categoryId": category.id,
+                    "name": category.name,
+                },
+            })
+        
+        return {
+            "success": True,
+            "message": "ดึงกิจกรรมใกล้ตัวสำเร็จ",
+            "data": response_events,
+            "meta": {
+                "page": page_number,
+                "pageSize": page_size_number,
+                "totalItems": total_items,
+                "totalPages": total_pages,
+            },
+        }
+
+    def get_map_events(
+        self,
+        latitude: float,
+        longitude: float,
+        radius_km: float,
+        category_id: int | None,
+        search: str | None,
+    ) -> dict:
+        location_service = LocationService()
+        
+        if not location_service.validate_coordinates(latitude, longitude):
+            raise bad_request(
+                message="ข้อมูลพิกัดไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "latitude/longitude",
+                        "code": "INVALID_COORDINATES",
+                        "detail": "latitude ต้องอยู่ระหว่าง -90 ถึง 90 และ longitude ต้องอยู่ระหว่าง -180 ถึง 180",
+                    }
+                ],
+            )
+        
+        if radius_km <= 0 or radius_km > 100:
+            raise bad_request(
+                message="ข้อมูลรัศมีไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "radiusKm",
+                        "code": "INVALID_RADIUS",
+                        "detail": "radiusKm ต้องมากกว่า 0 และไม่เกิน 100 กิโลเมตร",
+                    }
+                ],
+            )
+        
+        if category_id is not None:
+            self._ensure_category_exists(category_id)
+        
+        query = self.event_repo.get_query()
+        query = query.filter(Event.status == "PUBLISHED")
+        
+        if search is not None:
+            query = query.filter(Event.title.ilike(f"%{search}%"))
+        
+        if category_id is not None:
+            query = query.filter(Event.category_id == category_id)
+        
+        orm_events = query.all()
+        
+        # Filter by distance
+        nearby_events = []
+        for orm_event in orm_events:
+            distance = location_service.calculate_distance(latitude, longitude, orm_event.latitude, orm_event.longitude)
+            if location_service.is_within_radius(distance, radius_km):
+                nearby_events.append((orm_event, distance))
+        
+        # Sort by distance ascending (default for map)
+        nearby_events.sort(key=lambda x: x[1])
+        
+        # Build response (no pagination)
+        response_events = []
+        for orm_event, distance in nearby_events:
+            response_events.append({
+                "eventId": orm_event.id,
+                "title": orm_event.title,
+                "latitude": orm_event.latitude,
+                "longitude": orm_event.longitude,
+                "locationName": orm_event.location_name,
+                "distanceKm": round(distance, 2),
+                "startTime": orm_event.start_time.isoformat(),
+            })
+        
+        return {
+            "success": True,
+            "message": "ดึงข้อมูลแผนที่สำเร็จ",
+            "data": response_events,
+        }
+
+    def _parse_sort_by_nearby(self, sort_by: str | None) -> str:
+        if sort_by is None:
+            return "startTime"
+        allowed = {"startTime", "endTime", "distance"}
+        if sort_by not in allowed:
+            raise bad_request(
+                message="ข้อมูล query ไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "sortBy",
+                        "code": "INVALID_SORT_BY",
+                        "detail": f"sortBy ต้องเป็นหนึ่งใน {', '.join(allowed)}",
+                    }
+                ],
+            )
+        return sort_by

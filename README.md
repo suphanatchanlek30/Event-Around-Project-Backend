@@ -226,6 +226,14 @@ make seed
 	- ต้องเป็น `ORGANIZER`
 	- query: `page`, `pageSize`, `status`, `search`, `sortBy`, `sortOrder`
 	- แสดงเฉพาะกิจกรรมที่ organizer ปัจจุบันเป็นเจ้าของ
+- GET /api/v1/events/nearby
+	- Public
+	- query: `latitude`, `longitude`, `radiusKm`, `search`, `categoryId`, `page`, `pageSize`, `sortBy`, `sortOrder`
+	- ดึงกิจกรรมที่อยู่ในรัศมีเทียบกับตำแหน่งผู้ใช้
+- GET /api/v1/events/map
+	- Public
+	- query: `latitude`, `longitude`, `radiusKm`, `search`, `categoryId`
+	- คืนข้อมูลเบาๆ สำหรับ marker บนแผนที่
 - GET /api/v1/events/upcoming
 	- Public
 	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`

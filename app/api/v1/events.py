@@ -154,6 +154,52 @@ def cancel_event(
     return service.cancel_event(event_id=event_id, payload=payload, current_user=current_user)
 
 
+@router.get("/nearby", status_code=status.HTTP_200_OK)
+def get_nearby_events(
+    latitude: float = Query(...),
+    longitude: float = Query(...),
+    radius_km: float = Query(..., alias="radiusKm"),
+    search: str | None = Query(default=None),
+    category_id: int | None = Query(default=None, alias="categoryId"),
+    page: int | None = Query(default=1, ge=1),
+    page_size: int | None = Query(default=20, alias="pageSize", ge=1, le=100),
+    sort_by: str | None = Query(default=None, alias="sortBy"),
+    sort_order: str | None = Query(default=None, alias="sortOrder"),
+    db: Session = Depends(get_db),
+):
+    service = EventService(db)
+    return service.get_nearby_events(
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
+        search=search,
+        category_id=category_id,
+        page=page,
+        page_size=page_size,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+
+@router.get("/map", status_code=status.HTTP_200_OK)
+def get_map_events(
+    latitude: float = Query(...),
+    longitude: float = Query(...),
+    radius_km: float = Query(..., alias="radiusKm"),
+    category_id: int | None = Query(default=None, alias="categoryId"),
+    search: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    service = EventService(db)
+    return service.get_map_events(
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
+        category_id=category_id,
+        search=search,
+    )
+
+
 @router.get("/{event_id}", status_code=status.HTTP_200_OK)
 def get_event_detail(
     event_id: int,

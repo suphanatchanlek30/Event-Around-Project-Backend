@@ -61,3 +61,29 @@ class EventCancelRequest(BaseModel):
     reason: str
 
     model_config = {"populate_by_name": True}
+
+
+class NearbyEventResponse(BaseModel):
+    event_id: int = Field(..., alias="eventId")
+    title: str
+    location_name: str = Field(..., alias="locationName")
+    latitude: float
+    longitude: float
+    distance_km: float = Field(..., alias="distanceKm")
+    start_time: datetime = Field(..., alias="startTime")
+    end_time: datetime = Field(..., alias="endTime")
+    category: EventCategoryResponse
+
+    model_config = {"populate_by_name": True}
+
+
+class MapEventResponse(BaseModel):
+    event_id: int = Field(..., alias="eventId")
+    title: str
+    latitude: float
+    longitude: float
+    location_name: str = Field(..., alias="locationName")
+    distance_km: float = Field(..., alias="distanceKm")
+    start_time: datetime = Field(..., alias="startTime")
+
+    model_config = {"populate_by_name": True}

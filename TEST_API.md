@@ -741,7 +741,72 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
-#### **2️⃣3️⃣ Events: Upcoming (Public)**
+#### **2️⃣3️⃣ Events: Nearby (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/nearby?latitude=15.120100&longitude=104.905800&radiusKm=5&categoryId=3&search=python&sortBy=distance&sortOrder=asc&page=1&pageSize=20`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงกิจกรรมใกล้ตัวสำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "locationName": "SCI Building Room 501",
+      "latitude": 15.120245,
+      "longitude": 104.906928,
+      "distanceKm": 0.41,
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00",
+      "category": {
+        "categoryId": 3,
+        "name": "Workshop"
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 20,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+#### **2️⃣4️⃣ Events: Map (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/map?latitude=15.120100&longitude=104.905800&radiusKm=5&categoryId=3&search=python`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงข้อมูลแผนที่สำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "latitude": 15.120245,
+      "longitude": 104.906928,
+      "locationName": "SCI Building Room 501",
+      "distanceKm": 0.41,
+      "startTime": "2026-04-10T09:00:00+07:00"
+    }
+  ]
+}
+```
+
+---
+
+#### **2️⃣5️⃣ Events: Upcoming (Public)**
 
 **Method:** GET  
 **URL:** `http://127.0.0.1:8000/api/v1/events/upcoming?page=1&pageSize=10&categoryId=3&sortBy=startTime&sortOrder=asc`  

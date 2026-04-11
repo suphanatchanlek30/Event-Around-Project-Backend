@@ -81,6 +81,8 @@ def create_event(
     description: str | None = None,
     short_description: str | None = None,
     cover_image_url: str | None = None,
+    latitude: float = 14.87,
+    longitude: float = 102.01,
 ) -> Event:
     db = TestingSessionLocal()
     try:
@@ -89,8 +91,8 @@ def create_event(
             description=description,
             short_description=short_description,
             location_name=location_name,
-            latitude=14.87,
-            longitude=102.01,
+            latitude=latitude,
+            longitude=longitude,
             start_time=start_time,
             end_time=end_time,
             status=status,
@@ -604,3 +606,70 @@ def test_list_events_invalid_sort_by_returns_400():
     response = client.get("/api/v1/events?sortBy=invalid")
     assert response.status_code == 400
     assert response.json()["success"] is False
+
+
+def test_get_nearby_events():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_nearby@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+
+    # Create event with specific location
+    future_time = datetime.now(timezone.utc) + timedelta(days=7)
+    event = create_event(
+        title="Nearby Workshop",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=future_time,
+        end_time=future_time + timedelta(hours=3),
+        status="PUBLISHED",
+        latitude=15.120245,
+        longitude=104.906928,
+    )
+
+    # Test nearby with location close to event
+    response = client.get("/api/v1/events/nearby?latitude=15.120100&longitude=104.905800&radiusKm=5&sortBy=startTime&sortOrder=asc")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "ดึงกิจกรรมใกล้ตัวสำเร็จ"
+    assert len(body["data"]) == 1
+    assert body["data"][0]["eventId"] == event.id
+    assert "distanceKm" in body["data"][0]
+    assert body["meta"]["totalItems"] == 1
+
+
+def test_get_nearby_events_invalid_coordinates():
+    client = TestClient(app)
+    response = client.get("/api/v1/events/nearby?latitude=100&longitude=104.905800&radiusKm=5")
+    assert response.status_code == 400
+    assert response.json()["success"] is False
+
+
+def test_get_map_events():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_map@events.com")
+    category = create_category("Seminar", "กิจกรรมสัมมนา")
+
+    # Create event with specific location
+    future_time = datetime.now(timezone.utc) + timedelta(days=7)
+    event = create_event(
+        title="Map Seminar",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=future_time,
+        end_time=future_time + timedelta(hours=3),
+        status="PUBLISHED",
+        latitude=15.120245,
+        longitude=104.906928,
+    )
+
+    response = client.get("/api/v1/events/map?latitude=15.120100&longitude=104.905800&radiusKm=5")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "ดึงข้อมูลแผนที่สำเร็จ"
+    assert len(body["data"]) == 1
+    assert body["data"][0]["eventId"] == event.id
+    assert "distanceKm" in body["data"][0]
