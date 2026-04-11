@@ -460,6 +460,414 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **1️⃣5️⃣ Events: List (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายการกิจกรรมสำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "locationName": "SCI Building Room 501",
+      "startTime": "2026-04-10T09:00:00+00:00",
+      "endTime": "2026-04-10T12:00:00+00:00",
+      "status": "PUBLISHED",
+      "category": {
+        "categoryId": 3,
+        "name": "Workshop"
+      },
+      "organizer": {
+        "userId": 20,
+        "fullName": "Computer Science Club"
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+ต้องการกรอง/ค้นหา/จัดเรียงให้ใส่ query string เช่น:
+`GET /api/v1/events?search=python&categoryId=3&status=PUBLISHED&startFrom=2026-04-01T00:00:00Z&endTo=2026-04-30T23:59:59Z&sortBy=startTime&sortOrder=asc`
+
+---
+
+#### **1️⃣6️⃣ Events: Create (ORGANIZER / ADMIN)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/events`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "title": "Python Workshop",
+  "description": "เวิร์กชอป Python เบื้องต้น",
+  "shortDescription": "ลงมือทำจริง",
+  "locationName": "SCI Building Room 501",
+  "latitude": 15.120245,
+  "longitude": 104.906928,
+  "startTime": "2026-04-10T09:00:00+07:00",
+  "endTime": "2026-04-10T12:00:00+07:00",
+  "categoryId": 3,
+  "coverImageUrl": "https://example.com/python.jpg",
+  "status": "DRAFT"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "สร้างกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "title": "Python Workshop",
+    "status": "DRAFT",
+    "categoryId": 3,
+    "organizerId": 20
+  }
+}
+```
+
+---
+
+#### **1️⃣7️⃣ Events: Update (Organizer Owner)**
+
+**Method:** PATCH  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "title": "Python Workshop Updated",
+  "locationName": "SCI Building Room 502",
+  "latitude": 15.120300,
+  "longitude": 104.907000,
+  "startTime": "2026-04-10T10:00:00+07:00",
+  "endTime": "2026-04-10T13:00:00+07:00"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "แก้ไขกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "title": "Python Workshop Updated",
+    "locationName": "SCI Building Room 502",
+    "status": "DRAFT"
+  }
+}
+```
+
+---
+
+#### **1️⃣8️⃣ Events: Delete (Organizer Owner)**
+
+**Method:** DELETE  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ลบกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "deleted": true
+  }
+}
+```
+
+---
+
+#### **1️⃣9️⃣ Events: Publish (ADMIN only)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001/publish`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "เผยแพร่กิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "status": "PUBLISHED"
+  }
+}
+```
+
+---
+
+#### **2️⃣0️⃣ Events: Cancel (ADMIN or Organizer Owner)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001/cancel`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "reason": "เลื่อนสถานที่จัดงาน"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ยกเลิกกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "status": "CANCELLED",
+    "reason": "เลื่อนสถานที่จัดงาน"
+  }
+}
+```
+
+---
+
+#### **2️⃣1️⃣ Events: Detail (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/1001`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายละเอียดกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "title": "Python Workshop",
+    "description": "A hands-on workshop",
+    "shortDescription": "เรียนรู้ Python",
+    "locationName": "SCI Building Room 501",
+    "latitude": 14.87,
+    "longitude": 102.01,
+    "startTime": "2026-04-10T09:00:00+00:00",
+    "endTime": "2026-04-10T12:00:00+00:00",
+    "status": "PUBLISHED",
+    "coverImageUrl": "https://example.com/workshop.jpg",
+    "category": {
+      "categoryId": 3,
+      "name": "Workshop"
+    },
+    "organizer": {
+      "userId": 20,
+      "fullName": "Computer Science Club"
+    },
+    "savedCount": 12,
+    "isSaved": true
+  }
+}
+```
+
+---
+
+#### **2️⃣2️⃣ Events: My Events (Organizer Only)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/my-events?page=1&pageSize=10&status=PUBLISHED&search=python&sortBy=createdAt&sortOrder=desc`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายการกิจกรรมของผู้จัดสำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "status": "PUBLISHED",
+      "savedCount": 17,
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+#### **2️⃣3️⃣ Events: Nearby (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/nearby?latitude=15.120100&longitude=104.905800&radiusKm=5&categoryId=3&search=python&sortBy=distance&sortOrder=asc&page=1&pageSize=20`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงกิจกรรมใกล้ตัวสำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "locationName": "SCI Building Room 501",
+      "latitude": 15.120245,
+      "longitude": 104.906928,
+      "distanceKm": 0.41,
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00",
+      "category": {
+        "categoryId": 3,
+        "name": "Workshop"
+      }
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 20,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+#### **2️⃣4️⃣ Events: Map (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/map?latitude=15.120100&longitude=104.905800&radiusKm=5&categoryId=3&search=python`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงข้อมูลแผนที่สำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "latitude": 15.120245,
+      "longitude": 104.906928,
+      "locationName": "SCI Building Room 501",
+      "distanceKm": 0.41,
+      "startTime": "2026-04-10T09:00:00+07:00"
+    }
+  ]
+}
+```
+
+---
+
+#### **2️⃣5️⃣ Events: Upcoming (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/upcoming?page=1&pageSize=10&categoryId=3&sortBy=startTime&sortOrder=asc`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงกิจกรรมที่กำลังจะมาถึงสำเร็จ",
+  "data": [
+    {
+      "eventId": 1002,
+      "title": "Hackathon Intro",
+      "startTime": "2026-05-01T09:00:00+07:00",
+      "endTime": "2026-05-01T12:00:00+07:00",
+      "status": "PUBLISHED"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+#### **2️⃣4️⃣ Events: Active (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/active?page=1&pageSize=10&categoryId=3&sortBy=startTime&sortOrder=asc`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงกิจกรรมที่ยัง active สำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "status": "PUBLISHED",
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**

@@ -200,13 +200,61 @@ make seed
 	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
 	- เป็น soft delete (`isActive = false`)
 
+- GET /api/v1/events
+	- Public
+	- query: `page`, `pageSize`, `search`, `categoryId`, `status`, `startFrom`, `endTo`, `sortBy`, `sortOrder`
+	- Default แสดงเฉพาะ `PUBLISHED`
+- POST /api/v1/events
+	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
+	- Organizer สร้างได้เป็น `DRAFT`
+	- Admin สามารถสร้างได้ทั้ง `DRAFT` หรือ `PUBLISHED`
+- PATCH /api/v1/events/{eventId}
+	- ต้องเป็นเจ้าของกิจกรรม (`ORGANIZER` ที่เป็น organizer ของ event)
+- DELETE /api/v1/events/{eventId}
+	- ต้องเป็นเจ้าของกิจกรรม (`ORGANIZER` ที่เป็น organizer ของ event)
+- POST /api/v1/events/{eventId}/publish
+	- ต้องเป็น `ADMIN`
+	- ตรวจสอบข้อมูลครบก่อนเปลี่ยนเป็น `PUBLISHED`
+- POST /api/v1/events/{eventId}/cancel
+	- ต้องเป็น `ADMIN` หรือเจ้าของกิจกรรม
+	- บันทึกเหตุผลการยกเลิก
+- GET /api/v1/events/{eventId}
+	- Public
+	- ถ้า `event` อยู่ในสถานะอื่นที่ไม่ใช่ `PUBLISHED` จะต้องเป็น `ADMIN` หรือ `ORGANIZER` เท่านั้น
+	- `isSaved` จะคืนค่าเฉพาะสำหรับผู้ใช้ที่ล็อกอินเป็น `STUDENT`
+- GET /api/v1/events/my-events
+	- ต้องเป็น `ORGANIZER`
+	- query: `page`, `pageSize`, `status`, `search`, `sortBy`, `sortOrder`
+	- แสดงเฉพาะกิจกรรมที่ organizer ปัจจุบันเป็นเจ้าของ
+- GET /api/v1/events/nearby
+	- Public
+	- query: `latitude`, `longitude`, `radiusKm`, `search`, `categoryId`, `page`, `pageSize`, `sortBy`, `sortOrder`
+	- ดึงกิจกรรมที่อยู่ในรัศมีเทียบกับตำแหน่งผู้ใช้
+- GET /api/v1/events/map
+	- Public
+	- query: `latitude`, `longitude`, `radiusKm`, `search`, `categoryId`
+	- คืนข้อมูลเบาๆ สำหรับ marker บนแผนที่
+- GET /api/v1/events/upcoming
+	- Public
+	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`
+	- แสดงกิจกรรมที่กำลังจะมาถึง (start_time > now และ status = PUBLISHED)
+- GET /api/v1/events/active
+	- Public
+	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`
+	- แสดงกิจกรรมที่ยัง active (status = PUBLISHED และ end_time > now)
+
+### แนวคิดการทำงานของ Event APIs
+- ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้
+- `ADMIN` สามารถสร้างกิจกรรมเป็น `PUBLISHED` ได้โดยตรง หรืออนุมัติกิจกรรม `DRAFT` ให้เป็น `PUBLISHED`
+- เจ้าของกิจกรรม (Organizer) สามารถแก้ไขหรือลบกิจกรรมของตัวเองได้
+- `ADMIN` และเจ้าของกิจกรรมสามารถยกเลิกกิจกรรม พร้อมบันทึกเหตุผลการยกเลิก
+- กิจกรรมที่ยังเป็น `DRAFT` จะไม่แสดงในรายการสาธารณะจนกว่าจะถูกเผยแพร่
+
 หมายเหตุ:
 - ชื่อหมวดหมู่ห้ามซ้ำ (ตรวจแบบไม่สนตัวพิมพ์เล็ก/ใหญ่)
 - ถ้า query `includeInactive` ไม่ถูกต้อง จะตอบ `400`
 - ถ้าไม่มีสิทธิ์ จะตอบ `403`
 - ถ้าไม่พบหมวดหมู่ จะตอบ `404`
-
-## UML Mapping Status (Auth รอบล่าสุด)
 
 - `AuthService` เริ่ม delegate บาง business flow ไปที่ `app/domain/AuthManager` แล้ว
 - `register_student` และ `register_organizer` ใช้ `AuthManager.register_student()` / `AuthManager.register_organizer()` เพื่อกำหนด role จาก domain
