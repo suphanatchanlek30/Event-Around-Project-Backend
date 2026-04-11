@@ -222,6 +222,18 @@ make seed
 	- Public
 	- ถ้า `event` อยู่ในสถานะอื่นที่ไม่ใช่ `PUBLISHED` จะต้องเป็น `ADMIN` หรือ `ORGANIZER` เท่านั้น
 	- `isSaved` จะคืนค่าเฉพาะสำหรับผู้ใช้ที่ล็อกอินเป็น `STUDENT`
+- GET /api/v1/events/my-events
+	- ต้องเป็น `ORGANIZER`
+	- query: `page`, `pageSize`, `status`, `search`, `sortBy`, `sortOrder`
+	- แสดงเฉพาะกิจกรรมที่ organizer ปัจจุบันเป็นเจ้าของ
+- GET /api/v1/events/upcoming
+	- Public
+	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`
+	- แสดงกิจกรรมที่กำลังจะมาถึง (start_time > now และ status = PUBLISHED)
+- GET /api/v1/events/active
+	- Public
+	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`
+	- แสดงกิจกรรมที่ยัง active (status = PUBLISHED และ end_time > now)
 
 ### แนวคิดการทำงานของ Event APIs
 - ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้

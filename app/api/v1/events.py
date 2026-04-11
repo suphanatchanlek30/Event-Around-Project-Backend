@@ -41,6 +41,67 @@ def list_events(
     )
 
 
+@router.get("/my-events", status_code=status.HTTP_200_OK)
+def get_my_events(
+    page: int | None = Query(default=1, ge=1),
+    page_size: int | None = Query(default=10, alias="pageSize", ge=1, le=100),
+    status: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+    sort_by: str | None = Query(default=None, alias="sortBy"),
+    sort_order: str | None = Query(default=None, alias="sortOrder"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.get_my_events(
+        page=page,
+        page_size=page_size,
+        status=status,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        current_user=current_user,
+    )
+
+
+@router.get("/upcoming", status_code=status.HTTP_200_OK)
+def get_upcoming_events(
+    page: int | None = Query(default=1, ge=1),
+    page_size: int | None = Query(default=10, alias="pageSize", ge=1, le=100),
+    category_id: int | None = Query(default=None, alias="categoryId", ge=1),
+    sort_by: str | None = Query(default=None, alias="sortBy"),
+    sort_order: str | None = Query(default=None, alias="sortOrder"),
+    db: Session = Depends(get_db),
+):
+    service = EventService(db)
+    return service.get_upcoming_events(
+        page=page,
+        page_size=page_size,
+        category_id=category_id,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+
+@router.get("/active", status_code=status.HTTP_200_OK)
+def get_active_events(
+    page: int | None = Query(default=1, ge=1),
+    page_size: int | None = Query(default=10, alias="pageSize", ge=1, le=100),
+    category_id: int | None = Query(default=None, alias="categoryId", ge=1),
+    sort_by: str | None = Query(default=None, alias="sortBy"),
+    sort_order: str | None = Query(default=None, alias="sortOrder"),
+    db: Session = Depends(get_db),
+):
+    service = EventService(db)
+    return service.get_active_events(
+        page=page,
+        page_size=page_size,
+        category_id=category_id,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 def create_event(
     payload: EventCreateRequest,

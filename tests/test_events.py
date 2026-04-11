@@ -419,6 +419,148 @@ def test_admin_can_cancel_event_with_reason():
     assert body["data"]["reason"] == "เลื่อนสถานที่จัดงาน"
 
 
+def test_get_my_events_as_organizer():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_my_events@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+
+    # Create events for the organizer
+    event1 = create_event(
+        title="My Workshop 1",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=timezone.utc),
+        status="PUBLISHED",
+    )
+    event2 = create_event(
+        title="My Workshop 2",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 4, 15, 9, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
+        status="DRAFT",
+    )
+
+    # Create event for another organizer
+    other_organizer = create_user("ORGANIZER", "other_org@events.com")
+    create_event(
+        title="Other Workshop",
+        category_id=category.id,
+        organizer_id=other_organizer.id,
+        start_time=datetime(2026, 4, 20, 9, 0, tzinfo=timezone.utc),
+        end_time=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        status="PUBLISHED",
+    )
+
+    token = create_access_token_for_user(organizer)
+
+    response = client.get(
+        "/api/v1/events/my-events",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "ดึงรายการกิจกรรมของผู้จัดสำเร็จ"
+    assert body["meta"]["totalItems"] == 2
+    assert len(body["data"]) == 2
+    assert body["data"][0]["title"] in ["My Workshop 1", "My Workshop 2"]
+    assert body["data"][1]["title"] in ["My Workshop 1", "My Workshop 2"]
+
+
+def test_get_my_events_non_organizer_forbidden():
+    client = TestClient(app)
+    student = create_user("STUDENT", "student_my_events@events.com")
+    token = create_access_token_for_user(student)
+
+    response = client.get(
+        "/api/v1/events/my-events",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["success"] is False
+
+
+def test_get_upcoming_events():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_upcoming@events.com")
+    category = create_category("Seminar", "กิจกรรมสัมมนา")
+
+    # Create upcoming event (future start time)
+    future_time = datetime.now(timezone.utc) + timedelta(days=7)
+    upcoming_event = create_event(
+        title="Future Seminar",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=future_time,
+        end_time=future_time + timedelta(hours=3),
+        status="PUBLISHED",
+    )
+
+    # Create past event (should not appear)
+    past_time = datetime.now(timezone.utc) - timedelta(days=1)
+    create_event(
+        title="Past Seminar",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=past_time,
+        end_time=past_time + timedelta(hours=3),
+        status="PUBLISHED",
+    )
+
+    response = client.get("/api/v1/events/upcoming")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "ดึงกิจกรรมที่กำลังจะมาถึงสำเร็จ"
+    assert body["meta"]["totalItems"] == 1
+    assert len(body["data"]) == 1
+    assert body["data"][0]["eventId"] == upcoming_event.id
+    assert body["data"][0]["title"] == "Future Seminar"
+
+
+def test_get_active_events():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_active@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+
+    # Create active event (ongoing)
+    now = datetime.now(timezone.utc)
+    active_event = create_event(
+        title="Ongoing Workshop",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=now - timedelta(hours=1),
+        end_time=now + timedelta(hours=2),
+        status="PUBLISHED",
+    )
+
+    # Create ended event (should not appear)
+    ended_event = create_event(
+        title="Ended Workshop",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=now - timedelta(hours=3),
+        end_time=now - timedelta(hours=1),
+        status="PUBLISHED",
+    )
+
+    response = client.get("/api/v1/events/active")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "ดึงกิจกรรมที่ยัง active สำเร็จ"
+    assert body["meta"]["totalItems"] == 1
+    assert len(body["data"]) == 1
+    assert body["data"][0]["eventId"] == active_event.id
+    assert body["data"][0]["title"] == "Ongoing Workshop"
+
+
 def test_list_events_filters_search_category_date_and_sort():
     client = TestClient(app)
     organizer = create_user("ORGANIZER", "org2@events.com")

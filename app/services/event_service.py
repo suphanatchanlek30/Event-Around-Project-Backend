@@ -334,6 +334,200 @@ class EventService:
             "data": self._to_detail_response(domain_event, saved_count, is_saved),
         }
 
+    def get_my_events(
+        self,
+        page: int | None,
+        page_size: int | None,
+        status: str | None,
+        search: str | None,
+        sort_by: str | None,
+        sort_order: str | None,
+        current_user: User,
+    ) -> dict:
+        if current_user.role != "ORGANIZER":
+            raise forbidden("เฉพาะ ORGANIZER เท่านั้นที่สามารถดูกิจกรรมของตัวเองได้")
+
+        page_number = self._parse_page(page)
+        page_size_number = self._parse_page_size(page_size)
+        sort_by_field = self._parse_sort_by(sort_by)
+        sort_order_value = self._parse_sort_order(sort_order)
+
+        status_filter = None
+        if status is not None:
+            normalized = status.strip().upper()
+            if normalized not in {"DRAFT", "PUBLISHED", "CANCELLED"}:
+                raise bad_request(
+                    message="ข้อมูล query ไม่ถูกต้อง",
+                    errors=[
+                        {
+                            "field": "status",
+                            "code": "INVALID_STATUS",
+                            "detail": "status ต้องเป็น DRAFT, PUBLISHED หรือ CANCELLED",
+                        }
+                    ],
+                )
+            status_filter = normalized
+
+        query = self.event_repo.get_query()
+        query = query.filter(Event.organizer_id == current_user.id)
+
+        if status_filter is not None:
+            query = query.filter(Event.status == status_filter)
+
+        now = datetime.now(timezone.utc)
+        if sort_by_field == "createdAt":
+            query = query.order_by(Event.created_at.desc() if sort_order_value == "desc" else Event.created_at.asc())
+        else:
+            sort_column = Event.start_time if sort_by_field == "startTime" else Event.end_time
+            query = query.order_by(sort_column.desc() if sort_order_value == "desc" else sort_column.asc())
+
+        total_items = query.count()
+        total_pages = max(1, math.ceil(total_items / page_size_number))
+        offset = (page_number - 1) * page_size_number
+        orm_events = query.offset(offset).limit(page_size_number).all()
+
+        manager = EventManager()
+        for orm_event in orm_events:
+            manager.add_event(self._to_domain_event(orm_event))
+
+        filtered_events = manager.get_all_events()
+        if search is not None:
+            filtered_events = manager.search_by_keyword(search)
+
+        response_events = []
+        for event in filtered_events:
+            saved_count = self.event_repo.count_saves(event.get_event_id())
+            response_events.append({
+                "eventId": event.get_event_id(),
+                "title": event.get_title(),
+                "status": event.get_status(),
+                "savedCount": saved_count,
+                "startTime": event.get_start_time().isoformat(),
+                "endTime": event.get_end_time().isoformat(),
+            })
+
+        return {
+            "success": True,
+            "message": "ดึงรายการกิจกรรมของผู้จัดสำเร็จ",
+            "data": response_events,
+            "meta": {
+                "page": page_number,
+                "pageSize": page_size_number,
+                "totalItems": total_items,
+                "totalPages": total_pages,
+            },
+        }
+
+    def get_upcoming_events(
+        self,
+        page: int | None,
+        page_size: int | None,
+        category_id: int | None,
+        sort_by: str | None,
+        sort_order: str | None,
+    ) -> dict:
+        page_number = self._parse_page(page)
+        page_size_number = self._parse_page_size(page_size)
+        sort_by_field = self._parse_sort_by(sort_by)
+        sort_order_value = self._parse_sort_order(sort_order)
+
+        if category_id is not None:
+            self._ensure_category_exists(category_id)
+
+        query = self.event_repo.get_query()
+        query = query.filter(Event.status == "PUBLISHED")
+
+        now = datetime.now(timezone.utc)
+        query = query.filter(Event.start_time > now)
+
+        if category_id is not None:
+            query = query.filter(Event.category_id == category_id)
+
+        sort_column = Event.start_time if sort_by_field == "startTime" else Event.end_time
+        query = query.order_by(sort_column.desc() if sort_order_value == "desc" else sort_column.asc())
+
+        total_items = query.count()
+        total_pages = max(1, math.ceil(total_items / page_size_number))
+        offset = (page_number - 1) * page_size_number
+        orm_events = query.offset(offset).limit(page_size_number).all()
+
+        response_events = []
+        for orm_event in orm_events:
+            response_events.append({
+                "eventId": orm_event.id,
+                "title": orm_event.title,
+                "startTime": orm_event.start_time.isoformat(),
+                "endTime": orm_event.end_time.isoformat(),
+                "status": orm_event.status,
+            })
+
+        return {
+            "success": True,
+            "message": "ดึงกิจกรรมที่กำลังจะมาถึงสำเร็จ",
+            "data": response_events,
+            "meta": {
+                "page": page_number,
+                "pageSize": page_size_number,
+                "totalItems": total_items,
+                "totalPages": total_pages,
+            },
+        }
+
+    def get_active_events(
+        self,
+        page: int | None,
+        page_size: int | None,
+        category_id: int | None,
+        sort_by: str | None,
+        sort_order: str | None,
+    ) -> dict:
+        page_number = self._parse_page(page)
+        page_size_number = self._parse_page_size(page_size)
+        sort_by_field = self._parse_sort_by(sort_by)
+        sort_order_value = self._parse_sort_order(sort_order)
+
+        if category_id is not None:
+            self._ensure_category_exists(category_id)
+
+        query = self.event_repo.get_query()
+        query = query.filter(Event.status == "PUBLISHED")
+
+        now = datetime.now(timezone.utc)
+        query = query.filter(Event.end_time > now)
+
+        if category_id is not None:
+            query = query.filter(Event.category_id == category_id)
+
+        sort_column = Event.start_time if sort_by_field == "startTime" else Event.end_time
+        query = query.order_by(sort_column.desc() if sort_order_value == "desc" else sort_column.asc())
+
+        total_items = query.count()
+        total_pages = max(1, math.ceil(total_items / page_size_number))
+        offset = (page_number - 1) * page_size_number
+        orm_events = query.offset(offset).limit(page_size_number).all()
+
+        response_events = []
+        for orm_event in orm_events:
+            response_events.append({
+                "eventId": orm_event.id,
+                "title": orm_event.title,
+                "status": orm_event.status,
+                "startTime": orm_event.start_time.isoformat(),
+                "endTime": orm_event.end_time.isoformat(),
+            })
+
+        return {
+            "success": True,
+            "message": "ดึงกิจกรรมที่ยัง active สำเร็จ",
+            "data": response_events,
+            "meta": {
+                "page": page_number,
+                "pageSize": page_size_number,
+                "totalItems": total_items,
+                "totalPages": total_pages,
+            },
+        }
+
     def create_event(self, payload, current_user: User) -> dict:
         self._ensure_admin_or_organizer(current_user)
         status = self._parse_event_status(payload.status, current_user)

@@ -705,6 +705,104 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **2️⃣2️⃣ Events: My Events (Organizer Only)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/my-events?page=1&pageSize=10&status=PUBLISHED&search=python&sortBy=createdAt&sortOrder=desc`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายการกิจกรรมของผู้จัดสำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "status": "PUBLISHED",
+      "savedCount": 17,
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+#### **2️⃣3️⃣ Events: Upcoming (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/upcoming?page=1&pageSize=10&categoryId=3&sortBy=startTime&sortOrder=asc`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงกิจกรรมที่กำลังจะมาถึงสำเร็จ",
+  "data": [
+    {
+      "eventId": 1002,
+      "title": "Hackathon Intro",
+      "startTime": "2026-05-01T09:00:00+07:00",
+      "endTime": "2026-05-01T12:00:00+07:00",
+      "status": "PUBLISHED"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
+#### **2️⃣4️⃣ Events: Active (Public)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/events/active?page=1&pageSize=10&categoryId=3&sortBy=startTime&sortOrder=asc`  
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงกิจกรรมที่ยัง active สำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "status": "PUBLISHED",
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**
