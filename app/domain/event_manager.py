@@ -10,28 +10,46 @@ class EventManager:
         self._events: list[Event] = []
 
     def add_event(self, event: Event) -> None:
-        raise NotImplementedError("add_event is not implemented in skeleton phase.")
+        self._events.append(event)
 
     def update_event(self, event_id: int, new_data: dict) -> None:
-        raise NotImplementedError("update_event is not implemented in skeleton phase.")
+        for event in self._events:
+            if event.get_event_id() == event_id:
+                for key, value in new_data.items():
+                    if hasattr(event, f"set_{key}"):
+                        getattr(event, f"set_{key}")(value)
+                return
 
     def delete_event(self, event_id: int) -> None:
-        raise NotImplementedError("delete_event is not implemented in skeleton phase.")
+        self._events = [event for event in self._events if event.get_event_id() != event_id]
 
     def get_event_by_id(self, event_id: int) -> Event:
-        raise NotImplementedError("get_event_by_id is not implemented in skeleton phase.")
+        for event in self._events:
+            if event.get_event_id() == event_id:
+                return event
+        raise ValueError("Event not found")
 
     def get_all_events(self) -> list[Event]:
-        raise NotImplementedError("get_all_events is not implemented in skeleton phase.")
+        return list(self._events)
 
     def get_active_events(self, current_time: datetime) -> list[Event]:
-        raise NotImplementedError("get_active_events is not implemented in skeleton phase.")
+        return [event for event in self._events if event.is_active(current_time)]
 
     def search_by_keyword(self, keyword: str) -> list[Event]:
-        raise NotImplementedError("search_by_keyword is not implemented in skeleton phase.")
+        normalized = keyword.strip().lower()
+        return [
+            event
+            for event in self._events
+            if normalized in event.get_title().lower()
+            or normalized in event.get_description().lower()
+        ]
 
-    def filter_by_category(self, category_name: str) -> list[Event]:
-        raise NotImplementedError("filter_by_category is not implemented in skeleton phase.")
+    def filter_by_category(self, category_id: int) -> list[Event]:
+        return [
+            event
+            for event in self._events
+            if event.get_category().get_category_id() == category_id
+        ]
 
     def get_nearby_events(self, user_lat: float, user_lon: float, radius_km: float) -> list[Event]:
         raise NotImplementedError("get_nearby_events is not implemented in skeleton phase.")
