@@ -96,3 +96,10 @@ class EventRepository:
     def get_saved_event_ids(self, user_id: int) -> list[int]:
         rows = self.db.query(EventSave.event_id).filter(EventSave.user_id == user_id).all()
         return [row[0] for row in rows]
+
+    def get_saved_events_query(self, user_id: int):
+        return (
+            self.db.query(EventSave)
+            .filter(EventSave.user_id == user_id)
+            .join(EventSave.event)
+        )

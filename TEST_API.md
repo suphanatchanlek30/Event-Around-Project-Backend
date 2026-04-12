@@ -896,51 +896,43 @@ Content-Type: application/json
 }
 ```
 
-**Expected Error Cases:**
+#### **2️⃣8️⃣ Saved Events: Get My Saved Events (Student Only)**
 
-1. ไม่ส่ง token
-   - Status: `401 Unauthorized`
-   - ตัวอย่าง response:
-   ```json
-   {
-     "success": false,
-     "message": "ไม่ได้รับสิทธิ์การเข้าถึง"
-   }
-   ```
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
 
-2. role ไม่ใช่ STUDENT (เช่น ADMIN/ORGANIZER)
-   - Status: `403 Forbidden`
-   - ตัวอย่าง response:
-   ```json
-   {
-     "success": false,
-     "message": "เฉพาะ STUDENT เท่านั้นที่สามารถบันทึกกิจกรรมได้"
-   }
-   ```
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายการกิจกรรมที่บันทึกไว้สำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "locationName": "SCI Building Room 501",
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00",
+      "status": "PUBLISHED",
+      "savedAt": "2026-03-27T12:30:00+07:00"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
 
-3. ไม่พบกิจกรรม
-   - Status: `404 Not Found`
-   - ตัวอย่าง response:
-   ```json
-   {
-     "success": false,
-     "message": "ไม่พบกิจกรรม"
-   }
-   ```
-
-4. บันทึกซ้ำกิจกรรมเดิม
-   - Status: `409 Conflict`
-   - ตัวอย่าง response:
-   ```json
-   {
-     "success": false,
-     "message": "กิจกรรมนี้ถูกบันทึกแล้ว"
-   }
-   ```
-
-5. payload ไม่ถูกต้อง (เช่นไม่ส่ง `eventId` หรือ `eventId <= 0`)
-   - Status: `422 Unprocessable Entity`
-
+ดึงรายการกิจกรรมที่บันทึกไว้ทั้งหมดพร้อม pagination
+`GET /api/v1/saved-events?page=1&pageSize=10&status=PUBLISHED&sortBy=savedAt&sortOrder=desc`
 ---
 
 ### 💡 เคล็ดลับ Postman
@@ -959,7 +951,7 @@ Content-Type: application/json
 2. **ทดสอบตามลำดับ:**
   - Health → Register → Login → Get Me → Update Me → Change Password → Refresh → Logout
   - Categories List → Create → Get Detail → Update → Deactivate
-  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST)
+  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST) → Saved Events (GET)
 
 3. **Postman Collection (Optional):**
    - จัดเก็บ request ทีละชุด เพื่อรัน automation test ได้
@@ -996,6 +988,7 @@ python -m pytest tests/test_savedEvent.py -q
 - `tests/test_health.py`
 - `tests/test_auth.py`
 - `tests/test_categories.py`
+- `tests/test_events.py`
 - `tests/test_savedEvent.py`
 
 ## 4) คำสั่งปิดระบบ

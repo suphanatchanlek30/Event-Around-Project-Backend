@@ -343,3 +343,205 @@ def test_save_event_negative_event_id_returns_422():
 	assert response.status_code == 422
 	body = response.json()
 	assert "detail" in body
+
+
+# ─── GET /api/v1/saved-events ────────────────────────────────────────────────
+
+
+def test_get_saved_events_success_returns_list_with_meta():
+	client = TestClient(app)
+	student = create_user("STUDENT", "student_get_saved@example.com")
+	organizer = create_user("ORGANIZER", "org_get_saved@example.com")
+	category = create_category("Workshop")
+	event = create_event(
+		title="Saved Workshop",
+		category_id=category.id,
+		organizer_id=organizer.id,
+		status="PUBLISHED",
+	)
+	create_event_save(event.id, student.id)
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		"/api/v1/saved-events",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert body["success"] is True
+	assert body["message"] == "ดึงรายการกิจกรรมที่บันทึกไว้สำเร็จ"
+	assert len(body["data"]) == 1
+	assert body["data"][0]["eventId"] == event.id
+	assert body["data"][0]["title"] == "Saved Workshop"
+	assert body["data"][0]["status"] == "PUBLISHED"
+	assert "savedAt" in body["data"][0]
+	assert body["meta"]["totalItems"] == 1
+	assert body["meta"]["page"] == 1
+
+
+def test_get_saved_events_empty_when_no_saves():
+	client = TestClient(app)
+	student = create_user("STUDENT", "student_get_empty@example.com")
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		"/api/v1/saved-events",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert body["success"] is True
+	assert body["data"] == []
+	assert body["meta"]["totalItems"] == 0
+
+
+def test_get_saved_events_filter_by_status():
+	client = TestClient(app)
+	student = create_user("STUDENT", "student_filter_status@example.com")
+	organizer = create_user("ORGANIZER", "org_filter_status@example.com")
+	category = create_category("Seminar")
+	published_event = create_event(
+		title="Published Event",
+		category_id=category.id,
+		organizer_id=organizer.id,
+		status="PUBLISHED",
+	)
+	draft_event = create_event(
+		title="Draft Event",
+		category_id=category.id,
+		organizer_id=organizer.id,
+		status="DRAFT",
+	)
+	create_event_save(published_event.id, student.id)
+	create_event_save(draft_event.id, student.id)
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		"/api/v1/saved-events?status=PUBLISHED",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert body["meta"]["totalItems"] == 1
+	assert body["data"][0]["status"] == "PUBLISHED"
+
+
+def test_get_saved_events_pagination():
+	client = TestClient(app)
+	student = create_user("STUDENT", "student_pagination@example.com")
+	organizer = create_user("ORGANIZER", "org_pagination@example.com")
+	category = create_category("Talk")
+	for i in range(3):
+		event = create_event(
+			title=f"Event {i}",
+			category_id=category.id,
+			organizer_id=organizer.id,
+			status="PUBLISHED",
+		)
+		create_event_save(event.id, student.id)
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		"/api/v1/saved-events?page=1&pageSize=2",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert len(body["data"]) == 2
+	assert body["meta"]["totalItems"] == 3
+	assert body["meta"]["totalPages"] == 2
+	assert body["meta"]["pageSize"] == 2
+
+
+def test_get_saved_events_sort_by_saved_at_desc():
+	client = TestClient(app)
+	student = create_user("STUDENT", "student_sort_saved_at@example.com")
+	organizer = create_user("ORGANIZER", "org_sort_saved_at@example.com")
+	category = create_category("Hackathon")
+	event_a = create_event(
+		title="Event A",
+		category_id=category.id,
+		organizer_id=organizer.id,
+		status="PUBLISHED",
+	)
+	event_b = create_event(
+		title="Event B",
+		category_id=category.id,
+		organizer_id=organizer.id,
+		status="PUBLISHED",
+	)
+	create_event_save(event_a.id, student.id)
+	create_event_save(event_b.id, student.id)
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		"/api/v1/saved-events?sortBy=savedAt&sortOrder=desc",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert len(body["data"]) == 2
+	# Most recently saved (event_b) should come first
+	assert body["data"][0]["eventId"] == event_b.id
+
+
+def test_get_saved_events_invalid_status_returns_400():
+	client = TestClient(app)
+	student = create_user("STUDENT", "student_bad_status@example.com")
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		"/api/v1/saved-events?status=INVALID",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 400
+	body = response.json()
+	assert body["success"] is False
+
+
+def test_get_saved_events_without_token_returns_401():
+	client = TestClient(app)
+
+	response = client.get("/api/v1/saved-events")
+
+	assert response.status_code == 401
+	body = response.json()
+	assert body["success"] is False
+
+
+def test_get_saved_events_as_organizer_returns_403():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_get_forbidden@example.com")
+	token = create_access_token_for_user(organizer)
+
+	response = client.get(
+		"/api/v1/saved-events",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 403
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "เฉพาะ STUDENT เท่านั้นที่สามารถดูรายการกิจกรรมที่บันทึกไว้"
+
+
+def test_get_saved_events_as_admin_returns_403():
+	client = TestClient(app)
+	admin = create_user("ADMIN", "admin_get_forbidden@example.com")
+	token = create_access_token_for_user(admin)
+
+	response = client.get(
+		"/api/v1/saved-events",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 403
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "เฉพาะ STUDENT เท่านั้นที่สามารถดูรายการกิจกรรมที่บันทึกไว้"

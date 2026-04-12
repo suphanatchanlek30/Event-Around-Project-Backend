@@ -257,6 +257,16 @@ make seed
 		- ถ้าไม่พบกิจกรรม จะตอบ `404`
 		- ถ้าบันทึกกิจกรรมซ้ำ จะตอบ `409`
 		- ถ้า `eventId` ไม่ถูกต้อง (เช่น <= 0) จะตอบ `422`
+- GET /api/v1/saved-events
+	- ต้องเป็น `STUDENT`
+	- query: `page`, `pageSize`, `status`, `sortBy`, `sortOrder`
+	- ดึงรายการกิจกรรมที่ student บันทึกไว้ทั้งหมด พร้อม pagination
+	- `sortBy` รองรับ `savedAt` (default), `startTime`, `endTime`
+	- response แต่ละ item มี `savedAt` เพื่อแสดงเวลาที่บันทึก
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้า `status` ไม่ถูกต้อง จะตอบ `400`
 
 ### แนวคิดการทำงานของ Event APIs
 - ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้
