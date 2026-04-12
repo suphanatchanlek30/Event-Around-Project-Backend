@@ -201,6 +201,8 @@ make seed
 	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
 	- เป็น soft delete (`isActive = false`)
 
+## Event APIs ที่ทำแล้ว
+
 - GET /api/v1/events
 	- Public
 	- query: `page`, `pageSize`, `search`, `categoryId`, `status`, `startFrom`, `endTo`, `sortBy`, `sortOrder`
@@ -227,6 +229,9 @@ make seed
 	- ต้องเป็น `ORGANIZER`
 	- query: `page`, `pageSize`, `status`, `search`, `sortBy`, `sortOrder`
 	- แสดงเฉพาะกิจกรรมที่ organizer ปัจจุบันเป็นเจ้าของ
+
+## Nearby / Map APIs ที่ทำแล้ว
+
 - GET /api/v1/events/nearby
 	- Public
 	- query: `latitude`, `longitude`, `radiusKm`, `search`, `categoryId`, `page`, `pageSize`, `sortBy`, `sortOrder`
