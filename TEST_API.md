@@ -930,7 +930,6 @@ Authorization: Bearer {{accessToken}}
   }
 }
 ```
-
 ดึงรายการกิจกรรมที่บันทึกไว้ทั้งหมดพร้อม pagination
 `GET /api/v1/saved-events?page=1&pageSize=10&status=PUBLISHED&sortBy=savedAt&sortOrder=desc`
 
@@ -945,7 +944,7 @@ Authorization: Bearer {{accessToken}}
 Authorization: Bearer {{accessToken}}
 ```
 **Body:** None  
-**Path Param:** `eventId` (integer) — ID ของกิจกรรมที่ต้องการยกเลิกบันทึก
+**Path Param:** `eventId` — ID ของกิจกรรมที่ต้องการยกเลิกบันทึก
 
 **Expected Response (Success):**
 ```json
@@ -957,14 +956,8 @@ Authorization: Bearer {{accessToken}}
     "saved": false
   }
 }
+
 ```
-
-**Expected Error Cases:**
-
-1. ไม่ส่ง token → `401 Unauthorized`
-2. role ไม่ใช่ STUDENT → `403 Forbidden`
-3. ไม่พบกิจกรรมในรายการบันทึก → `404 Not Found`
-
 ---
 
 #### **3️⃣0️⃣ Saved Events: Check Save Status (Student Only)**
@@ -976,7 +969,7 @@ Authorization: Bearer {{accessToken}}
 Authorization: Bearer {{accessToken}}
 ```
 **Body:** None  
-**Path Param:** `eventId` (integer) — ID ของกิจกรรมที่ต้องการตรวจสอบ
+**Path Param:** `eventId` — ID ของกิจกรรมที่ต้องการตรวจสอบ
 
 **Expected Response (Success):**
 ```json
@@ -991,12 +984,6 @@ Authorization: Bearer {{accessToken}}
 ```
 
 `isSaved` จะเป็น `false` ถ้านักศึกษายังไม่เคยบันทึก event นี้
-
-**Expected Error Cases:**
-
-1. ไม่ส่ง token → `401 Unauthorized`
-2. role ไม่ใช่ STUDENT → `403 Forbidden`
-3. ไม่พบ event (ไม่มี eventId นี้ในระบบ) → `404 Not Found`
 
 ---
 
