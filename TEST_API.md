@@ -837,7 +837,7 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
-#### **2️⃣4️⃣ Events: Active (Public)**
+#### **2️⃣6️⃣ Events: Active (Public)**
 
 **Method:** GET  
 **URL:** `http://127.0.0.1:8000/api/v1/events/active?page=1&pageSize=10&categoryId=3&sortBy=startTime&sortOrder=asc`  
@@ -868,6 +868,125 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **2️⃣7️⃣ Saved Events: Save Event (Student Only)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "eventId": 1001
+}
+```
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "บันทึกกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "saved": true
+  }
+}
+```
+
+#### **2️⃣8️⃣ Saved Events: Get My Saved Events (Student Only)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "ดึงรายการกิจกรรมที่บันทึกไว้สำเร็จ",
+  "data": [
+    {
+      "eventId": 1001,
+      "title": "Python Workshop",
+      "locationName": "SCI Building Room 501",
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00",
+      "status": "PUBLISHED",
+      "savedAt": "2026-03-27T12:30:00+07:00"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalItems": 1,
+    "totalPages": 1
+  }
+}
+```
+ดึงรายการกิจกรรมที่บันทึกไว้ทั้งหมดพร้อม pagination
+`GET /api/v1/saved-events?page=1&pageSize=10&status=PUBLISHED&sortBy=savedAt&sortOrder=desc`
+
+---
+
+#### **2️⃣9️⃣ Saved Events: Unsave Event (Student Only)**
+
+**Method:** DELETE  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events/{eventId}`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None  
+**Path Param:** `eventId` — ID ของกิจกรรมที่ต้องการยกเลิกบันทึก
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "ยกเลิกบันทึกกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "saved": false
+  }
+}
+
+```
+---
+
+#### **3️⃣0️⃣ Saved Events: Check Save Status (Student Only)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events/check/{eventId}`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None  
+**Path Param:** `eventId` — ID ของกิจกรรมที่ต้องการตรวจสอบ
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "ตรวจสอบสถานะการบันทึกสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "isSaved": true
+  }
+}
+```
+
+`isSaved` จะเป็น `false` ถ้านักศึกษายังไม่เคยบันทึก event นี้
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**
@@ -884,6 +1003,7 @@ Authorization: Bearer {{accessToken}}
 2. **ทดสอบตามลำดับ:**
   - Health → Register → Login → Get Me → Update Me → Change Password → Refresh → Logout
   - Categories List → Create → Get Detail → Update → Deactivate
+  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST) → Saved Events (GET) → Saved Events (DELETE) → Saved Events (Check)
 
 3. **Postman Collection (Optional):**
    - จัดเก็บ request ทีละชุด เพื่อรัน automation test ได้
@@ -910,10 +1030,18 @@ python -m pytest tests/test_auth.py -q
 python -m pytest tests/test_categories.py -q
 ```
 
+รันเฉพาะไฟล์ทดสอบ saved events:
+
+```bash
+python -m pytest tests/test_savedEvent.py -q
+```
+
 ไฟล์ทดสอบหลัก:
 - `tests/test_health.py`
 - `tests/test_auth.py`
 - `tests/test_categories.py`
+- `tests/test_events.py`
+- `tests/test_savedEvent.py`
 
 ## 4) คำสั่งปิดระบบ
 
