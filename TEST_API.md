@@ -837,7 +837,7 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
-#### **2️⃣4️⃣ Events: Active (Public)**
+#### **2️⃣6️⃣ Events: Active (Public)**
 
 **Method:** GET  
 **URL:** `http://127.0.0.1:8000/api/v1/events/active?page=1&pageSize=10&categoryId=3&sortBy=startTime&sortOrder=asc`  
@@ -868,6 +868,81 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **2️⃣7️⃣ Saved Events: Save Event (Student Only)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "eventId": 1001
+}
+```
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "บันทึกกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "saved": true
+  }
+}
+```
+
+**Expected Error Cases:**
+
+1. ไม่ส่ง token
+   - Status: `401 Unauthorized`
+   - ตัวอย่าง response:
+   ```json
+   {
+     "success": false,
+     "message": "ไม่ได้รับสิทธิ์การเข้าถึง"
+   }
+   ```
+
+2. role ไม่ใช่ STUDENT (เช่น ADMIN/ORGANIZER)
+   - Status: `403 Forbidden`
+   - ตัวอย่าง response:
+   ```json
+   {
+     "success": false,
+     "message": "เฉพาะ STUDENT เท่านั้นที่สามารถบันทึกกิจกรรมได้"
+   }
+   ```
+
+3. ไม่พบกิจกรรม
+   - Status: `404 Not Found`
+   - ตัวอย่าง response:
+   ```json
+   {
+     "success": false,
+     "message": "ไม่พบกิจกรรม"
+   }
+   ```
+
+4. บันทึกซ้ำกิจกรรมเดิม
+   - Status: `409 Conflict`
+   - ตัวอย่าง response:
+   ```json
+   {
+     "success": false,
+     "message": "กิจกรรมนี้ถูกบันทึกแล้ว"
+   }
+   ```
+
+5. payload ไม่ถูกต้อง (เช่นไม่ส่ง `eventId` หรือ `eventId <= 0`)
+   - Status: `422 Unprocessable Entity`
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**
@@ -884,6 +959,7 @@ Authorization: Bearer {{accessToken}}
 2. **ทดสอบตามลำดับ:**
   - Health → Register → Login → Get Me → Update Me → Change Password → Refresh → Logout
   - Categories List → Create → Get Detail → Update → Deactivate
+  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST)
 
 3. **Postman Collection (Optional):**
    - จัดเก็บ request ทีละชุด เพื่อรัน automation test ได้
@@ -910,10 +986,17 @@ python -m pytest tests/test_auth.py -q
 python -m pytest tests/test_categories.py -q
 ```
 
+รันเฉพาะไฟล์ทดสอบ saved events:
+
+```bash
+python -m pytest tests/test_savedEvent.py -q
+```
+
 ไฟล์ทดสอบหลัก:
 - `tests/test_health.py`
 - `tests/test_auth.py`
 - `tests/test_categories.py`
+- `tests/test_savedEvent.py`
 
 ## 4) คำสั่งปิดระบบ
 

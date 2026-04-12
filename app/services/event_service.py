@@ -11,6 +11,7 @@ from app.domain.location_service import LocationService
 from app.domain.organizer import Organizer
 from app.domain.student import Student
 from app.models.event import Event
+from app.models.event_save import EventSave
 from app.models.user import User
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.event_repository import EventRepository
@@ -1039,3 +1040,41 @@ class EventService:
                 ],
             )
         return sort_by
+
+    #Save an event for a student to their favorites
+    def save_event(self, event_id: int, current_user: User) -> dict:
+        if current_user.role != "STUDENT":
+            raise forbidden("เฉพาะ STUDENT เท่านั้นที่สามารถบันทึกกิจกรรมได้")
+
+        event = self.event_repo.get_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรม")
+
+        if self.event_repo.is_saved_by_user(event_id, current_user.id):
+            raise conflict("กิจกรรมนี้ถูกบันทึกแล้ว")
+
+        #build domain event and student then save
+        domain_event = self._to_domain_event(event)
+        manager = EventManager()
+        manager.add_event(domain_event)
+        domain_event = manager.get_event_by_id(event_id)
+
+        student = self._build_domain_student(current_user, self.event_repo.get_saved_event_ids(current_user.id))
+        student.save_event(domain_event)
+
+        event_save = EventSave(
+            event_id=event_id,
+            user_id=current_user.id,
+        )
+        self.db.add(event_save)
+        self.db.commit()
+        self.db.refresh(event_save)
+
+        return {
+            "success": True,
+            "message": "บันทึกกิจกรรมสำเร็จ",
+            "data": {
+                "eventId": event_id,
+                "saved": True,
+            },
+        }

@@ -11,6 +11,7 @@
 - API สมัครสมาชิกนักศึกษา
 - API ยืนยันตัวตน (Auth) ครบชุดเบื้องต้น
 - API หมวดหมู่กิจกรรม (Categories) ครบชุดพื้นฐาน
+- API บันทึกกิจกรรมโปรด (Saved Events)
 - โครงคลาส UML (Skeleton Phase) ครบชุดใน `app/domain`
 - สคริปต์ seed ข้อมูลตัวอย่าง
 - ชุดทดสอบเบื้องต้น
@@ -242,6 +243,20 @@ make seed
 	- Public
 	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`
 	- แสดงกิจกรรมที่ยัง active (status = PUBLISHED และ end_time > now)
+
+## SavedEvent APIs ที่ทำแล้ว
+
+- POST /api/v1/saved-events
+	- ต้องเป็น `STUDENT`
+	- Body: `eventId`
+	- บันทึกกิจกรรมลงรายการโปรดของผู้ใช้
+	- response จะคืน `eventId` และ `saved = true`
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้าไม่พบกิจกรรม จะตอบ `404`
+		- ถ้าบันทึกกิจกรรมซ้ำ จะตอบ `409`
+		- ถ้า `eventId` ไม่ถูกต้อง (เช่น <= 0) จะตอบ `422`
 
 ### แนวคิดการทำงานของ Event APIs
 - ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้
