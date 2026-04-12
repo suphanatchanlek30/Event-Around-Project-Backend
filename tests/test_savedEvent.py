@@ -647,3 +647,103 @@ def test_unsave_event_not_saved_returns_404():
 	body = response.json()
 	assert body["success"] is False
 	assert body["message"] == "ไม่พบกิจกรรมที่บันทึกไว้"
+
+
+# ─────────── GET /api/v1/saved-events/check/{eventId} ───────────
+
+def test_check_saved_event_is_saved_returns_true():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_check_saved@example.com")
+	student = create_user("STUDENT", "student_check_saved@example.com")
+	category = create_category()
+	event = create_event("Event Check Saved", category.id, organizer.id)
+	create_event_save(event.id, student.id)
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		f"/api/v1/saved-events/check/{event.id}",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert body["success"] is True
+	assert body["message"] == "ตรวจสอบสถานะการบันทึกสำเร็จ"
+	assert body["data"]["eventId"] == event.id
+	assert body["data"]["isSaved"] is True
+
+
+def test_check_saved_event_not_saved_returns_false():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_check_unsaved@example.com")
+	student = create_user("STUDENT", "student_check_unsaved@example.com")
+	category = create_category()
+	event = create_event("Event Check Not Saved", category.id, organizer.id)
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		f"/api/v1/saved-events/check/{event.id}",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert body["success"] is True
+	assert body["data"]["eventId"] == event.id
+	assert body["data"]["isSaved"] is False
+
+
+def test_check_saved_event_without_token_returns_401():
+	client = TestClient(app)
+
+	response = client.get("/api/v1/saved-events/check/1")
+
+	assert response.status_code == 401
+
+
+def test_check_saved_event_as_organizer_returns_403():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_check_403@example.com")
+	token = create_access_token_for_user(organizer)
+
+	response = client.get(
+		"/api/v1/saved-events/check/1",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 403
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "เฉพาะ STUDENT เท่านั้นที่สามารถตรวจสอบสถานะการบันทึกได้"
+
+
+def test_check_saved_event_as_admin_returns_403():
+	client = TestClient(app)
+	admin = create_user("ADMIN", "admin_check_403@example.com")
+	token = create_access_token_for_user(admin)
+
+	response = client.get(
+		"/api/v1/saved-events/check/1",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 403
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "เฉพาะ STUDENT เท่านั้นที่สามารถตรวจสอบสถานะการบันทึกได้"
+
+
+def test_check_saved_event_event_not_found_returns_404():
+	client = TestClient(app)
+	student = create_user("STUDENT", "student_check_404@example.com")
+	token = create_access_token_for_user(student)
+
+	response = client.get(
+		"/api/v1/saved-events/check/99999",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 404
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "ไม่พบกิจกรรม"

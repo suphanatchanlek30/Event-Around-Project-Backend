@@ -945,7 +945,7 @@ Authorization: Bearer {{accessToken}}
 Authorization: Bearer {{accessToken}}
 ```
 **Body:** None  
-**Path Param:** `eventId` 
+**Path Param:** `eventId` (integer) — ID ของกิจกรรมที่ต้องการยกเลิกบันทึก
 
 **Expected Response (Success):**
 ```json
@@ -958,6 +958,45 @@ Authorization: Bearer {{accessToken}}
   }
 }
 ```
+
+**Expected Error Cases:**
+
+1. ไม่ส่ง token → `401 Unauthorized`
+2. role ไม่ใช่ STUDENT → `403 Forbidden`
+3. ไม่พบกิจกรรมในรายการบันทึก → `404 Not Found`
+
+---
+
+#### **3️⃣0️⃣ Saved Events: Check Save Status (Student Only)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events/check/{eventId}`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None  
+**Path Param:** `eventId` (integer) — ID ของกิจกรรมที่ต้องการตรวจสอบ
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "ตรวจสอบสถานะการบันทึกสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "isSaved": true
+  }
+}
+```
+
+`isSaved` จะเป็น `false` ถ้านักศึกษายังไม่เคยบันทึก event นี้
+
+**Expected Error Cases:**
+
+1. ไม่ส่ง token → `401 Unauthorized`
+2. role ไม่ใช่ STUDENT → `403 Forbidden`
+3. ไม่พบ event (ไม่มี eventId นี้ในระบบ) → `404 Not Found`
 
 ---
 
@@ -977,7 +1016,7 @@ Authorization: Bearer {{accessToken}}
 2. **ทดสอบตามลำดับ:**
   - Health → Register → Login → Get Me → Update Me → Change Password → Refresh → Logout
   - Categories List → Create → Get Detail → Update → Deactivate
-  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST) → Saved Events (GET) → Saved Events (DELETE)
+  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST) → Saved Events (GET) → Saved Events (DELETE) → Saved Events (Check)
 
 3. **Postman Collection (Optional):**
    - จัดเก็บ request ทีละชุด เพื่อรัน automation test ได้

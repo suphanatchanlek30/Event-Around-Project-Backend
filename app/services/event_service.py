@@ -1194,6 +1194,28 @@ class EventService:
             },
         }
 
+    def check_saved_event(self, event_id: int, current_user: User) -> dict:
+        if current_user.role != "STUDENT":
+            raise forbidden("เฉพาะ STUDENT เท่านั้นที่สามารถตรวจสอบสถานะการบันทึกได้")
+
+        event = self.event_repo.get_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรม")
+
+        saved_event_ids = self.event_repo.get_saved_event_ids(current_user.id)
+        student = self._build_domain_student(current_user, saved_event_ids)
+        domain_event = self._to_domain_event(event)
+        is_saved = student.has_saved_event(domain_event)
+
+        return {
+            "success": True,
+            "message": "ตรวจสอบสถานะการบันทึกสำเร็จ",
+            "data": {
+                "eventId": event_id,
+                "isSaved": is_saved,
+            },
+        }
+
     def unsave_event(self, event_id: int, current_user: User) -> dict:
         if current_user.role != "STUDENT":
             raise forbidden("เฉพาะ STUDENT เท่านั้นที่สามารถยกเลิกบันทึกกิจกรรมได้")

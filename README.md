@@ -276,6 +276,15 @@ make seed
 		- ถ้าไม่ส่ง token จะตอบ `401`
 		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
 		- ถ้าไม่พบกิจกรรมในรายการบันทึก จะตอบ `404`
+- GET /api/v1/saved-events/check/{eventId}
+	- ต้องเป็น `STUDENT`
+	- Path param: `eventId` (integer)
+	- ใช้เช็กว่า event นี้ถูกบันทึกโดยนักศึกษาปัจจุบันแล้วหรือยัง เพื่อเอาไปแสดงปุ่ม save/unsave บน frontend
+	- response จะคืน `eventId` และ `isSaved = true|false`
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้าไม่พบกิจกรรม จะตอบ `404`
 
 ### แนวคิดการทำงานของ Event APIs
 - ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้
