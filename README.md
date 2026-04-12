@@ -11,6 +11,7 @@
 - API สมัครสมาชิกนักศึกษา
 - API ยืนยันตัวตน (Auth) ครบชุดเบื้องต้น
 - API หมวดหมู่กิจกรรม (Categories) ครบชุดพื้นฐาน
+- API บันทึกกิจกรรมโปรด (Saved Events)
 - โครงคลาส UML (Skeleton Phase) ครบชุดใน `app/domain`
 - สคริปต์ seed ข้อมูลตัวอย่าง
 - ชุดทดสอบเบื้องต้น
@@ -242,6 +243,65 @@ make seed
 	- Public
 	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`
 	- แสดงกิจกรรมที่ยัง active (status = PUBLISHED และ end_time > now)
+
+## Organizer APIs ที่ทำแล้ว
+
+- GET /api/v1/organizer/dashboard
+	- ต้องเป็น `ORGANIZER`
+	- แสดงสรุปข้อมูล dashboard ของ organizer
+	- คืนจำนวน event ทั้งหมด, DRAFT, PUBLISHED, CANCELLED และยอด saved รวม
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `ORGANIZER` จะตอบ `403`
+- GET /api/v1/organizer/events/{eventId}/stats
+	- ต้องเป็น `ORGANIZER` และเป็นเจ้าของกิจกรรม
+	- ดูสถิติราย event เช่น savedCount, status, start/end time
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `ORGANIZER` หรือไม่ใช่เจ้าของกิจกรรม จะตอบ `403`
+		- ถ้าไม่พบกิจกรรม จะตอบ `404`
+
+## SavedEvent APIs ที่ทำแล้ว
+
+- POST /api/v1/saved-events
+	- ต้องเป็น `STUDENT`
+	- Body: `eventId`
+	- บันทึกกิจกรรมลงรายการโปรดของผู้ใช้
+	- response จะคืน `eventId` และ `saved = true`
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้าไม่พบกิจกรรม จะตอบ `404`
+		- ถ้าบันทึกกิจกรรมซ้ำ จะตอบ `409`
+		- ถ้า `eventId` ไม่ถูกต้อง จะตอบ `422`
+- GET /api/v1/saved-events
+	- ต้องเป็น `STUDENT`
+	- query: `page`, `pageSize`, `status`, `sortBy`, `sortOrder`
+	- ดึงรายการกิจกรรมที่ student บันทึกไว้ทั้งหมด พร้อม pagination
+	- `sortBy` รองรับ `savedAt`, `startTime`, `endTime`
+	- response แต่ละ item มี `savedAt` เพื่อแสดงเวลาที่บันทึก
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้า `status` ไม่ถูกต้อง จะตอบ `400`
+- DELETE /api/v1/saved-events/{eventId}
+	- ต้องเป็น `STUDENT`
+	- Path param: `eventId` 
+	- ยกเลิกบันทึกกิจกรรมออกจากรายการโปรดของผู้ใช้
+	- response จะคืน `eventId` และ `saved = false`
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้าไม่พบกิจกรรมในรายการบันทึก จะตอบ `404`
+- GET /api/v1/saved-events/check/{eventId}
+	- ต้องเป็น `STUDENT`
+	- Path param: `eventId` 
+	- ใช้เช็กว่า event นี้ถูกบันทึกโดยนักศึกษาปัจจุบันแล้วหรือยัง เพื่อเอาไปแสดงปุ่ม save/unsave บน frontend
+	- response จะคืน `eventId` และ `isSaved = true|false`
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้าไม่พบกิจกรรม จะตอบ `404`
 
 ### แนวคิดการทำงานของ Event APIs
 - ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้

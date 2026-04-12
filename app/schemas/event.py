@@ -87,3 +87,9 @@ class MapEventResponse(BaseModel):
     start_time: datetime = Field(..., alias="startTime")
 
     model_config = {"populate_by_name": True}
+
+
+class SaveEventRequest(BaseModel):
+    event_id: int = Field(..., alias="eventId", ge=1)
+
+    model_config = {"populate_by_name": True}
