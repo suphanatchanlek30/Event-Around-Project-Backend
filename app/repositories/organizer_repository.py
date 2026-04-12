@@ -22,3 +22,13 @@ class OrganizerRepository:
             .filter(Event.organizer_id == organizer_id)
             .scalar() or 0
         )
+
+    def get_event_by_id(self, event_id: int) -> Event | None:
+        return self.db.query(Event).filter(Event.id == event_id).first()
+
+    def count_saves_for_event(self, event_id: int) -> int:
+        return (
+            self.db.query(func.count(EventSave.id))
+            .filter(EventSave.event_id == event_id)
+            .scalar() or 0
+        )

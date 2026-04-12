@@ -16,3 +16,13 @@ def get_dashboard(
 ):
     service = OrganizerService(db)
     return service.get_dashboard(current_user)
+
+
+@router.get("/events/{event_id}/stats", status_code=status.HTTP_200_OK)
+def get_event_stats(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = OrganizerService(db)
+    return service.get_event_stats(event_id, current_user)

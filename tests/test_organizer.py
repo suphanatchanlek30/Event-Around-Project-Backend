@@ -224,3 +224,105 @@ def test_dashboard_forbidden_admin():
     )
 
     assert resp.status_code == 403
+
+
+# ========== GET /api/v1/organizer/events/{eventId}/stats ==========
+
+# ---------- success ----------
+
+def test_event_stats_returns_correct_data():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_stats@test.com")
+    student1 = create_user("STUDENT", "stu1_stats@test.com")
+    student2 = create_user("STUDENT", "stu2_stats@test.com")
+    cat = create_category()
+
+    event = create_event(cat.id, organizer.id, status="PUBLISHED", title="Python Workshop")
+    create_event_save(event.id, student1.id)
+    create_event_save(event.id, student2.id)
+
+    token = token_for(organizer)
+    resp = client.get(
+        f"/api/v1/organizer/events/{event.id}/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["success"] is True
+    assert body["message"] == "ดึงสถิติกิจกรรมสำเร็จ"
+    data = body["data"]
+    assert data["eventId"] == event.id
+    assert data["title"] == "Python Workshop"
+    assert data["status"] == "PUBLISHED"
+    assert data["savedCount"] == 2
+    assert "startTime" in data
+    assert "endTime" in data
+
+
+def test_event_stats_zero_saves():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_zero_stats@test.com")
+    cat = create_category()
+    event = create_event(cat.id, organizer.id, status="DRAFT", title="Draft Event")
+
+    token = token_for(organizer)
+    resp = client.get(
+        f"/api/v1/organizer/events/{event.id}/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["savedCount"] == 0
+    assert data["status"] == "DRAFT"
+
+
+# ---------- error cases ----------
+
+def test_event_stats_unauthorized_no_token():
+    client = TestClient(app)
+    resp = client.get("/api/v1/organizer/events/1/stats")
+    assert resp.status_code == 401
+
+
+def test_event_stats_forbidden_student():
+    client = TestClient(app)
+    student = create_user("STUDENT", "stu_stats_forbid@test.com")
+    token = token_for(student)
+
+    resp = client.get(
+        "/api/v1/organizer/events/1/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 403
+
+
+def test_event_stats_not_found():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_notfound@test.com")
+    token = token_for(organizer)
+
+    resp = client.get(
+        "/api/v1/organizer/events/9999/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 404
+
+
+def test_event_stats_forbidden_not_owner():
+    client = TestClient(app)
+    org1 = create_user("ORGANIZER", "org1_stats@test.com")
+    org2 = create_user("ORGANIZER", "org2_stats@test.com")
+    cat = create_category()
+    event = create_event(cat.id, org1.id, status="PUBLISHED")
+
+    token = token_for(org2)
+    resp = client.get(
+        f"/api/v1/organizer/events/{event.id}/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert resp.status_code == 403

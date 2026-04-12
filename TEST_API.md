@@ -1014,6 +1014,40 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **3️⃣2️⃣ Organizer: Event Stats (ORGANIZER Owner Only)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/organizer/events/{eventId}/stats`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "ดึงสถิติกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "title": "Python Workshop",
+    "status": "PUBLISHED",
+    "savedCount": 17,
+    "startTime": "2026-04-10T09:00:00+07:00",
+    "endTime": "2026-04-10T12:00:00+07:00"
+  }
+}
+```
+
+**Error Responses:**
+
+- **401 Unauthorized** — ไม่ได้ส่ง token หรือ token หมดอายุ
+- **403 Forbidden** — role ไม่ใช่ ORGANIZER หรือไม่ใช่เจ้าของกิจกรรม
+- **404 Not Found** — ไม่พบกิจกรรม
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**

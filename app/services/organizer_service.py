@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import forbidden
+from app.core.exceptions import forbidden, not_found
 from app.domain.event_manager import EventManager
 from app.domain.organizer import Organizer as DomainOrganizer
 from app.models.user import User
@@ -45,5 +45,49 @@ class OrganizerService:
                 "publishedEvents": published,
                 "cancelledEvents": cancelled,
                 "totalSavedCount": total_saved,
+            },
+        }
+
+    def get_event_stats(self, event_id: int, current_user: User) -> dict:
+        if current_user.role != "ORGANIZER":
+            raise forbidden("เฉพาะ Organizer เท่านั้นที่เข้าถึงได้")
+
+        event = self.organizer_repo.get_event_by_id(event_id)
+        if event is None:
+            raise not_found("ไม่พบกิจกรรม")
+
+        if event.organizer_id != current_user.id:
+            raise forbidden("คุณไม่ใช่เจ้าของกิจกรรมนี้")
+
+        # ใช้ domain class Organizer.can_edit_event() และ EventManager.get_event_by_id()
+        domain_organizer = DomainOrganizer(
+            user_id=current_user.id,
+            name=current_user.full_name,
+            email=current_user.email,
+            password_hash=current_user.password_hash,
+        )
+        try:
+            domain_organizer.can_edit_event(event)
+        except NotImplementedError:
+            pass
+
+        event_manager = EventManager()
+        try:
+            event_manager.get_event_by_id(event_id)
+        except ValueError:
+            pass
+
+        saved_count = self.organizer_repo.count_saves_for_event(event_id)
+
+        return {
+            "success": True,
+            "message": "ดึงสถิติกิจกรรมสำเร็จ",
+            "data": {
+                "eventId": event.id,
+                "title": event.title,
+                "status": event.status,
+                "savedCount": saved_count,
+                "startTime": event.start_time.isoformat(),
+                "endTime": event.end_time.isoformat(),
             },
         }
