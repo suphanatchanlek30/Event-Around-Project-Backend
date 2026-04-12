@@ -244,6 +244,16 @@ make seed
 	- query: `page`, `pageSize`, `categoryId`, `sortBy`, `sortOrder`
 	- แสดงกิจกรรมที่ยัง active (status = PUBLISHED และ end_time > now)
 
+## Organizer APIs ที่ทำแล้ว
+
+- GET /api/v1/organizer/dashboard
+	- ต้องเป็น `ORGANIZER`
+	- แสดงสรุปข้อมูล dashboard ของ organizer
+	- คืนจำนวน event ทั้งหมด, DRAFT, PUBLISHED, CANCELLED และยอด saved รวม
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `ORGANIZER` จะตอบ `403`
+
 ## SavedEvent APIs ที่ทำแล้ว
 
 - POST /api/v1/saved-events

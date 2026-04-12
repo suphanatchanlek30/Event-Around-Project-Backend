@@ -987,6 +987,33 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **3️⃣1️⃣ Organizer: Dashboard (ORGANIZER Only)**
+
+**Method:** GET  
+**URL:** `http://127.0.0.1:8000/api/v1/organizer/dashboard`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "ดึง dashboard สำเร็จ",
+  "data": {
+    "totalEvents": 12,
+    "draftEvents": 2,
+    "publishedEvents": 8,
+    "cancelledEvents": 2,
+    "totalSavedCount": 114
+  }
+}
+```
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**
