@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.event import SaveEventRequest
-from app.services.event_service import EventService
+from app.services.saved_event_service import SavedEventService
 
 router = APIRouter(prefix="/saved-events", tags=["saved-events"])
 
@@ -20,7 +20,7 @@ def get_saved_events(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    service = EventService(db)
+    service = SavedEventService(db)
     return service.get_saved_events(
         page=page,
         page_size=page_size,
@@ -37,7 +37,7 @@ def save_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    service = EventService(db)
+    service = SavedEventService(db)
     return service.save_event(
         event_id=payload.event_id,
         current_user=current_user,
@@ -50,7 +50,7 @@ def check_saved_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    service = EventService(db)
+    service = SavedEventService(db)
     return service.check_saved_event(
         event_id=event_id,
         current_user=current_user,
@@ -63,7 +63,7 @@ def unsave_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    service = EventService(db)
+    service = SavedEventService(db)
     return service.unsave_event(
         event_id=event_id,
         current_user=current_user,
