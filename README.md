@@ -267,6 +267,15 @@ make seed
 		- ถ้าไม่ส่ง token จะตอบ `401`
 		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
 		- ถ้า `status` ไม่ถูกต้อง จะตอบ `400`
+- DELETE /api/v1/saved-events/{eventId}
+	- ต้องเป็น `STUDENT`
+	- Path param: `eventId` (integer)
+	- ยกเลิกบันทึกกิจกรรมออกจากรายการโปรดของผู้ใช้
+	- response จะคืน `eventId` และ `saved = false`
+	- กรณีผิดเงื่อนไข:
+		- ถ้าไม่ส่ง token จะตอบ `401`
+		- ถ้า role ไม่ใช่ `STUDENT` จะตอบ `403`
+		- ถ้าไม่พบกิจกรรมในรายการบันทึก จะตอบ `404`
 
 ### แนวคิดการทำงานของ Event APIs
 - ผู้ใช้ `ORGANIZER` สร้างกิจกรรมใหม่ในสถานะ `DRAFT` ได้

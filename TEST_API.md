@@ -933,6 +933,32 @@ Authorization: Bearer {{accessToken}}
 
 ดึงรายการกิจกรรมที่บันทึกไว้ทั้งหมดพร้อม pagination
 `GET /api/v1/saved-events?page=1&pageSize=10&status=PUBLISHED&sortBy=savedAt&sortOrder=desc`
+
+---
+
+#### **2️⃣9️⃣ Saved Events: Unsave Event (Student Only)**
+
+**Method:** DELETE  
+**URL:** `http://127.0.0.1:8000/api/v1/saved-events/{eventId}`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** None  
+**Path Param:** `eventId` 
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "ยกเลิกบันทึกกิจกรรมสำเร็จ",
+  "data": {
+    "eventId": 1001,
+    "saved": false
+  }
+}
+```
+
 ---
 
 ### 💡 เคล็ดลับ Postman
@@ -951,7 +977,7 @@ Authorization: Bearer {{accessToken}}
 2. **ทดสอบตามลำดับ:**
   - Health → Register → Login → Get Me → Update Me → Change Password → Refresh → Logout
   - Categories List → Create → Get Detail → Update → Deactivate
-  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST) → Saved Events (GET)
+  - Events List → Detail → My Events / Nearby / Map / Upcoming / Active → Saved Events (POST) → Saved Events (GET) → Saved Events (DELETE)
 
 3. **Postman Collection (Optional):**
    - จัดเก็บ request ทีละชุด เพื่อรัน automation test ได้

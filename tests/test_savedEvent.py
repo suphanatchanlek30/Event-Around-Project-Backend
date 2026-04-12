@@ -545,3 +545,105 @@ def test_get_saved_events_as_admin_returns_403():
 	body = response.json()
 	assert body["success"] is False
 	assert body["message"] == "เฉพาะ STUDENT เท่านั้นที่สามารถดูรายการกิจกรรมที่บันทึกไว้"
+
+
+# ─────────── DELETE /api/v1/saved-events/{eventId} ───────────
+
+def test_unsave_event_success():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_unsave@example.com")
+	student = create_user("STUDENT", "student_unsave@example.com")
+	category = create_category()
+	event = create_event("Event Unsave", category.id, organizer.id)
+	create_event_save(event.id, student.id)
+	token = create_access_token_for_user(student)
+
+	response = client.delete(
+		f"/api/v1/saved-events/{event.id}",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 200
+	body = response.json()
+	assert body["success"] is True
+	assert body["message"] == "ยกเลิกบันทึกกิจกรรมสำเร็จ"
+	assert body["data"]["eventId"] == event.id
+	assert body["data"]["saved"] is False
+
+
+def test_unsave_event_removes_from_db():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_unsave_db@example.com")
+	student = create_user("STUDENT", "student_unsave_db@example.com")
+	category = create_category()
+	event = create_event("Event Unsave DB", category.id, organizer.id)
+	create_event_save(event.id, student.id)
+	token = create_access_token_for_user(student)
+
+	assert count_event_saves(event.id, student.id) == 1
+
+	client.delete(
+		f"/api/v1/saved-events/{event.id}",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert count_event_saves(event.id, student.id) == 0
+
+
+def test_unsave_event_without_token_returns_401():
+	client = TestClient(app)
+
+	response = client.delete("/api/v1/saved-events/1")
+
+	assert response.status_code == 401
+
+
+def test_unsave_event_as_organizer_returns_403():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_unsave_403@example.com")
+	token = create_access_token_for_user(organizer)
+
+	response = client.delete(
+		"/api/v1/saved-events/1",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 403
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "เฉพาะ STUDENT เท่านั้นที่สามารถยกเลิกบันทึกกิจกรรมได้"
+
+
+def test_unsave_event_as_admin_returns_403():
+	client = TestClient(app)
+	admin = create_user("ADMIN", "admin_unsave_403@example.com")
+	token = create_access_token_for_user(admin)
+
+	response = client.delete(
+		"/api/v1/saved-events/1",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 403
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "เฉพาะ STUDENT เท่านั้นที่สามารถยกเลิกบันทึกกิจกรรมได้"
+
+
+def test_unsave_event_not_saved_returns_404():
+	client = TestClient(app)
+	organizer = create_user("ORGANIZER", "org_unsave_404@example.com")
+	student = create_user("STUDENT", "student_unsave_404@example.com")
+	category = create_category()
+	event = create_event("Event Not Saved", category.id, organizer.id)
+	token = create_access_token_for_user(student)
+
+	response = client.delete(
+		f"/api/v1/saved-events/{event.id}",
+		headers={"Authorization": f"Bearer {token}"},
+	)
+
+	assert response.status_code == 404
+	body = response.json()
+	assert body["success"] is False
+	assert body["message"] == "ไม่พบกิจกรรมที่บันทึกไว้"

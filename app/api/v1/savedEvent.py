@@ -42,3 +42,16 @@ def save_event(
         event_id=payload.event_id,
         current_user=current_user,
     )
+
+
+@router.delete("/{event_id}", status_code=status.HTTP_200_OK)
+def unsave_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.unsave_event(
+        event_id=event_id,
+        current_user=current_user,
+    )

@@ -103,3 +103,13 @@ class EventRepository:
             .filter(EventSave.user_id == user_id)
             .join(EventSave.event)
         )
+
+    def get_saved_event(self, event_id: int, user_id: int) -> EventSave | None:
+        return self.db.query(EventSave).filter(
+            EventSave.event_id == event_id,
+            EventSave.user_id == user_id,
+        ).first()
+
+    def delete_saved_event(self, event_save: EventSave) -> None:
+        self.db.delete(event_save)
+        self.db.commit()
