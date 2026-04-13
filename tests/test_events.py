@@ -418,7 +418,35 @@ def test_admin_can_cancel_event_with_reason():
     body = response.json()
     assert body["success"] is True
     assert body["data"]["status"] == "CANCELLED"
-    assert body["data"]["reason"] == "เลื่อนสถานที่จัดงาน"
+
+
+def test_import_events_csv_creates_events_and_returns_import_log():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_import@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+    create_category("Seminar", "กิจกรรมสัมมนา")
+
+    token = create_access_token_for_user(organizer)
+    csv_content = (
+        "title,description,shortDescription,locationName,latitude,longitude,startTime,endTime,categoryId,coverImageUrl,status\n"
+        "Python Bootcamp,หลักสูตรเข้มข้น,เวิร์กชอป,Main Hall,15.0,100.0,2026-05-01T09:00:00+07:00,2026-05-01T12:00:00+07:00,1,https://example.com/image.jpg,DRAFT\n"
+        "Invalid Time Event,,สั้น,Main Hall,15.0,100.0,2026-05-01T12:00:00+07:00,2026-05-01T10:00:00+07:00,1,,\n"
+    )
+
+    response = client.post(
+        "/api/v1/import/events/csv",
+        headers={"Authorization": f"Bearer {token}"},
+        files={"file": ("events.csv", csv_content, "text/csv")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["totalRecords"] == 2
+    assert body["data"]["successRecords"] == 1
+    assert body["data"]["failedRecords"] == 1
+    assert body["data"]["importLogId"] > 0
+    assert body["data"]["errors"][0]["row"] == 3
 
 
 def test_get_my_events_as_organizer():

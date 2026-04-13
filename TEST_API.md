@@ -1048,6 +1048,56 @@ Authorization: Bearer {{accessToken}}
 
 ---
 
+#### **3️⃣3️⃣ Events: Import from CSV (ORGANIZER / ADMIN)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/import/events/csv`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+```
+**Body:** `form-data`
+- `file` → เลือกไฟล์ CSV  
+- `defaultStatus` → `DRAFT` หรือ `PUBLISHED` (optional)
+
+**ตัวอย่างไฟล์ CSV:**
+```
+title,description,shortDescription,locationName,latitude,longitude,startTime,endTime,categoryId,coverImageUrl,status
+```
+
+**Expected Response:**
+```json
+{
+    "success": true,
+    "message": "นำเข้าข้อมูล CSV สำเร็จ",
+    "data": {
+        "totalRecords": 2,
+        "successRecords": 0,
+        "failedRecords": 2,
+        "importLogId": 1,
+        "errors": [
+            {
+                "row": 2,
+                "field": "categoryId",
+                "detail": "ไม่พบหมวดหมู่ที่ต้องการ"
+            },
+            {
+                "row": 3,
+                "field": "categoryId",
+                "detail": "ไม่พบหมวดหมู่ที่ต้องการ"
+            }
+        ]
+    }
+}
+```
+
+**Error Responses::**
+- `ORGANIZER` สามารถนำเข้า CSV ได้ แต่ถ้าใส่ `status=PUBLISHED` ใน row นั้น ระบบจะไม่ยอมให้ตั้งค่าเป็น `PUBLISHED` หากไม่ได้ใช้สิทธิ์ ADMIN
+- หากไม่กำหนด `status` ใน row ระบบจะใช้ค่า `defaultStatus`
+- หากโครงสร้าง CSV ผิด ระบบจะตอบ `400 bad csv format`
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**

@@ -1,6 +1,9 @@
+import csv
+import io
 import math
 from datetime import datetime, timezone
 
+from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import bad_request, conflict, forbidden, not_found
@@ -13,6 +16,7 @@ from app.domain.student import Student
 from app.models.event import Event
 from app.models.user import User
 from app.repositories.category_repository import CategoryRepository
+from app.repositories.event_import_log_repository import EventImportLogRepository
 from app.repositories.event_repository import EventRepository
 
 
@@ -151,6 +155,262 @@ class EventService:
             raise forbidden("เฉพาะ ADMIN เท่านั้นที่สามารถสร้างกิจกรรมเป็น PUBLISHED ได้")
 
         return normalized
+
+    def _parse_import_status(self, status: str | None, current_user: User) -> str:
+        if status is None or not status.strip():
+            return "DRAFT"
+
+        normalized = status.strip().upper()
+        if normalized not in {"DRAFT", "PUBLISHED"}:
+            raise bad_request(
+                message="ข้อมูลไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "defaultStatus",
+                        "code": "INVALID_STATUS",
+                        "detail": "defaultStatus ต้องเป็น DRAFT หรือ PUBLISHED",
+                    }
+                ],
+            )
+
+        if normalized == "PUBLISHED" and current_user.role != "ADMIN":
+            raise forbidden("เฉพาะ ADMIN เท่านั้นที่สามารถสร้างกิจกรรมเป็น PUBLISHED ได้")
+
+        return normalized
+
+    def _validate_import_headers(self, headers: list[str] | None) -> bool:
+        if headers is None:
+            return False
+
+        required_headers = {
+            "title",
+            "locationName",
+            "latitude",
+            "longitude",
+            "startTime",
+            "endTime",
+            "categoryId",
+        }
+        found_headers = {header.strip() for header in headers if header}
+        return required_headers.issubset(found_headers)
+
+    def _parse_import_row(self, raw_row: dict[str, str], row_number: int, default_status: str, current_user: User) -> tuple[dict | None, list[dict]]:
+        errors: list[dict] = []
+
+        def get_value(field: str) -> str:
+            return (raw_row.get(field) or "").strip()
+
+        title = get_value("title")
+        description = get_value("description") or None
+        short_description = get_value("shortDescription") or None
+        location_name = get_value("locationName")
+        latitude_value = get_value("latitude")
+        longitude_value = get_value("longitude")
+        start_time_value = get_value("startTime")
+        end_time_value = get_value("endTime")
+        category_id_value = get_value("categoryId")
+        cover_image_url = get_value("coverImageUrl") or None
+        status_value = get_value("status")
+
+        if not title:
+            errors.append({"row": row_number, "field": "title", "detail": "title ต้องระบุ"})
+        if not location_name:
+            errors.append({"row": row_number, "field": "locationName", "detail": "locationName ต้องระบุ"})
+
+        latitude = None
+        if not latitude_value:
+            errors.append({"row": row_number, "field": "latitude", "detail": "latitude ต้องระบุ"})
+        else:
+            try:
+                latitude = float(latitude_value)
+            except ValueError:
+                errors.append({"row": row_number, "field": "latitude", "detail": "latitude ต้องเป็นตัวเลข"})
+
+        longitude = None
+        if not longitude_value:
+            errors.append({"row": row_number, "field": "longitude", "detail": "longitude ต้องระบุ"})
+        else:
+            try:
+                longitude = float(longitude_value)
+            except ValueError:
+                errors.append({"row": row_number, "field": "longitude", "detail": "longitude ต้องเป็นตัวเลข"})
+
+        start_time = None
+        if not start_time_value:
+            errors.append({"row": row_number, "field": "startTime", "detail": "startTime ต้องระบุ"})
+        else:
+            try:
+                start_time = datetime.fromisoformat(start_time_value)
+            except ValueError:
+                errors.append({"row": row_number, "field": "startTime", "detail": "Invalid datetime"})
+
+        end_time = None
+        if not end_time_value:
+            errors.append({"row": row_number, "field": "endTime", "detail": "endTime ต้องระบุ"})
+        else:
+            try:
+                end_time = datetime.fromisoformat(end_time_value)
+            except ValueError:
+                errors.append({"row": row_number, "field": "endTime", "detail": "Invalid datetime"})
+
+        category_id = None
+        if not category_id_value:
+            errors.append({"row": row_number, "field": "categoryId", "detail": "categoryId ต้องระบุ"})
+        else:
+            try:
+                category_id = int(category_id_value)
+            except ValueError:
+                errors.append({"row": row_number, "field": "categoryId", "detail": "categoryId ต้องเป็นจำนวนเต็ม"})
+
+        if category_id is not None:
+            if CategoryRepository(self.db).get_by_id(category_id) is None:
+                errors.append({"row": row_number, "field": "categoryId", "detail": "ไม่พบหมวดหมู่ที่ต้องการ"})
+
+        if latitude is not None and longitude is not None:
+            if not LocationService().validate_coordinates(latitude, longitude):
+                errors.append({"row": row_number, "field": "latitude/longitude", "detail": "Invalid coordinates"})
+
+        if start_time is not None and end_time is not None:
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            else:
+                start_time = start_time.astimezone(timezone.utc)
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=timezone.utc)
+            else:
+                end_time = end_time.astimezone(timezone.utc)
+            if start_time >= end_time:
+                errors.append({"row": row_number, "field": "startTime/endTime", "detail": "startTime ต้องน้อยกว่า endTime"})
+
+        status = default_status
+        if status_value:
+            normalized_status = status_value.strip().upper()
+            if normalized_status not in {"DRAFT", "PUBLISHED"}:
+                errors.append({"row": row_number, "field": "status", "detail": "status ต้องเป็น DRAFT หรือ PUBLISHED"})
+            else:
+                if normalized_status == "PUBLISHED" and current_user.role != "ADMIN":
+                    errors.append({"row": row_number, "field": "status", "detail": "เฉพาะ ADMIN เท่านั้นที่สามารถตั้ง status เป็น PUBLISHED ได้"})
+                else:
+                    status = normalized_status
+
+        if errors:
+            return None, errors
+
+        return (
+            {
+                "title": title,
+                "description": description,
+                "short_description": short_description,
+                "location_name": location_name,
+                "latitude": latitude,
+                "longitude": longitude,
+                "start_time": start_time,
+                "end_time": end_time,
+                "category_id": category_id,
+                "cover_image_url": cover_image_url,
+                "status": status,
+            },
+            [],
+        )
+
+    def import_events_from_csv(self, file: UploadFile, default_status: str | None, current_user: User) -> dict:
+        self._ensure_admin_or_organizer(current_user)
+
+        if not file.filename or not file.filename.lower().endswith(".csv"):
+            raise bad_request(
+                message="ไฟล์ต้องเป็น CSV",
+                errors=[
+                    {
+                        "field": "file",
+                        "code": "INVALID_FILE",
+                        "detail": "ต้องอัปโหลดไฟล์ .csv",
+                    }
+                ],
+            )
+
+        normalized_default_status = self._parse_import_status(default_status, current_user)
+
+        try:
+            csv_stream = io.TextIOWrapper(file.file, encoding="utf-8-sig")
+            reader = csv.DictReader(csv_stream)
+        except Exception:
+            raise bad_request(
+                message="ไฟล์ CSV ไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "file",
+                        "code": "INVALID_CSV_FORMAT",
+                        "detail": "ไม่สามารถอ่านไฟล์ CSV ได้",
+                    }
+                ],
+            )
+
+        if not self._validate_import_headers(reader.fieldnames):
+            raise bad_request(
+                message="ไฟล์ CSV ไม่ถูกต้อง",
+                errors=[
+                    {
+                        "field": "file",
+                        "code": "INVALID_CSV_FORMAT",
+                        "detail": "header CSV ต้องมี title, locationName, latitude, longitude, startTime, endTime, categoryId",
+                    }
+                ],
+            )
+
+        total_records = 0
+        success_records = 0
+        failed_records = 0
+        errors: list[dict] = []
+
+        for row_index, row in enumerate(reader, start=2):
+            total_records += 1
+            parsed, row_errors = self._parse_import_row(row, row_index, normalized_default_status, current_user)
+            if row_errors:
+                failed_records += 1
+                errors.extend(row_errors)
+                continue
+
+            try:
+                self.event_repo.create(
+                    title=parsed["title"],
+                    description=parsed["description"],
+                    short_description=parsed["short_description"],
+                    location_name=parsed["location_name"],
+                    latitude=parsed["latitude"],
+                    longitude=parsed["longitude"],
+                    start_time=parsed["start_time"],
+                    end_time=parsed["end_time"],
+                    status=parsed["status"],
+                    category_id=parsed["category_id"],
+                    organizer_id=current_user.id,
+                    cover_image_url=parsed["cover_image_url"],
+                )
+                success_records += 1
+            except Exception:
+                self.db.rollback()
+                failed_records += 1
+                errors.append({"row": row_index, "field": "csv", "detail": "ไม่สามารถบันทึกกิจกรรมได้"})
+
+        import_log = EventImportLogRepository(self.db).create(
+            organizer_id=current_user.id,
+            total_records=total_records,
+            success_records=success_records,
+            failed_records=failed_records,
+            default_status=normalized_default_status,
+            file_name=file.filename,
+        )
+
+        return {
+            "success": True,
+            "message": "นำเข้าข้อมูล CSV สำเร็จ",
+            "data": {
+                "totalRecords": total_records,
+                "successRecords": success_records,
+                "failedRecords": failed_records,
+                "importLogId": import_log.id,
+                "errors": errors,
+            },
+        }
 
     def _validate_coordinates(self, latitude: float, longitude: float) -> None:
         if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
