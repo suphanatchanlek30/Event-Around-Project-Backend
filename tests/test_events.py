@@ -449,6 +449,45 @@ def test_import_events_csv_creates_events_and_returns_import_log():
     assert body["data"]["errors"][0]["row"] == 3
 
 
+def test_import_events_json_creates_events_and_returns_import_log():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_import_json@events.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+
+    token = create_access_token_for_user(organizer)
+    payload = {
+        "events": [
+            {
+                "title": "Python Workshop",
+                "description": "เวิร์กชอป Python",
+                "shortDescription": "ลงมือทำ",
+                "locationName": "SCI 501",
+                "latitude": 15.120245,
+                "longitude": 104.906928,
+                "startTime": "2026-04-10T09:00:00+07:00",
+                "endTime": "2026-04-10T12:00:00+07:00",
+                "categoryId": category.id,
+                "status": "DRAFT"
+            }
+        ]
+    }
+
+    response = client.post(
+        "/api/v1/import/events/json",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["totalRecords"] == 1
+    assert body["data"]["successRecords"] == 1
+    assert body["data"]["failedRecords"] == 0
+    assert body["data"]["importLogId"] > 0
+    assert body["data"]["errors"] == []
+
+
 def test_get_my_events_as_organizer():
     client = TestClient(app)
     organizer = create_user("ORGANIZER", "org_my_events@events.com")

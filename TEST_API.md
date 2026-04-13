@@ -1098,6 +1098,58 @@ title,description,shortDescription,locationName,latitude,longitude,startTime,end
 
 ---
 
+#### **3️⃣4️⃣ Events: Import from JSON (ORGANIZER / ADMIN)**
+
+**Method:** POST  
+**URL:** `http://127.0.0.1:8000/api/v1/import/events/json`  
+**Headers:**
+```
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+```
+**Body:**
+```json
+{
+  "events": [
+    {
+      "title": "Python Workshop",
+      "description": "เวิร์กชอป Python",
+      "shortDescription": "ลงมือทำ",
+      "locationName": "SCI 501",
+      "latitude": 15.120245,
+      "longitude": 104.906928,
+      "startTime": "2026-04-10T09:00:00+07:00",
+      "endTime": "2026-04-10T12:00:00+07:00",
+      "categoryId": 3,
+      "status": "DRAFT"
+    }
+  ]
+}
+```
+
+**Expected Response:**
+```json
+{
+    "success": true,
+    "message": "นำเข้าข้อมูล JSON สำเร็จ",
+    "data": {
+        "totalRecords": 1,
+        "successRecords": 0,
+        "failedRecords": 1,
+        "importLogId": 2,
+        "errors": [
+            {
+                "row": 1,
+                "field": "categoryId",
+                "detail": "ไม่พบหมวดหมู่ที่ต้องการ"
+            }
+        ]
+    }
+}
+```
+
+---
+
 ### 💡 เคล็ดลับ Postman
 
 1. **ตั้ง Environment Variables:**

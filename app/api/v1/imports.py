@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
+from app.schemas.event import EventImportRequest
 from app.services.event_service import EventService
 
 router = APIRouter(prefix="/import", tags=["import"])
@@ -20,5 +21,18 @@ def import_events_csv(
     return service.import_events_from_csv(
         file=file,
         default_status=default_status,
+        current_user=current_user,
+    )
+
+
+@router.post("/events/json", status_code=status.HTTP_200_OK)
+def import_events_json(
+    payload: EventImportRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    service = EventService(db)
+    return service.import_events_from_json(
+        payload=payload,
         current_user=current_user,
     )

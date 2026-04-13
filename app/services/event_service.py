@@ -2,6 +2,7 @@ import csv
 import io
 import math
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
@@ -18,6 +19,7 @@ from app.models.user import User
 from app.repositories.category_repository import CategoryRepository
 from app.repositories.event_import_log_repository import EventImportLogRepository
 from app.repositories.event_repository import EventRepository
+from app.schemas.event import EventImportRequest
 
 
 class EventService:
@@ -313,6 +315,89 @@ class EventService:
             [],
         )
 
+    def _parse_import_item(self, item: Any, row_number: int, current_user: User) -> tuple[dict | None, list[dict]]:
+        errors: list[dict] = []
+
+        title = item.title.strip() if item.title else ""
+        description = item.description or None
+        short_description = item.short_description
+        location_name = item.location_name.strip() if item.location_name else ""
+        latitude = item.latitude
+        longitude = item.longitude
+        start_time = item.start_time
+        end_time = item.end_time
+        category_id = item.category_id
+        cover_image_url = item.cover_image_url or None
+        status_value = item.status
+
+        if not title:
+            errors.append({"row": row_number, "field": "title", "detail": "title ต้องระบุ"})
+        if not location_name:
+            errors.append({"row": row_number, "field": "locationName", "detail": "locationName ต้องระบุ"})
+
+        if latitude is None:
+            errors.append({"row": row_number, "field": "latitude", "detail": "latitude ต้องระบุ"})
+        if longitude is None:
+            errors.append({"row": row_number, "field": "longitude", "detail": "longitude ต้องระบุ"})
+
+        if latitude is not None and longitude is not None:
+            if not LocationService().validate_coordinates(latitude, longitude):
+                errors.append({"row": row_number, "field": "latitude/longitude", "detail": "Invalid coordinates"})
+
+        if start_time is None:
+            errors.append({"row": row_number, "field": "startTime", "detail": "startTime ต้องระบุ"})
+        if end_time is None:
+            errors.append({"row": row_number, "field": "endTime", "detail": "endTime ต้องระบุ"})
+
+        if start_time is not None and end_time is not None:
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+            else:
+                start_time = start_time.astimezone(timezone.utc)
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=timezone.utc)
+            else:
+                end_time = end_time.astimezone(timezone.utc)
+            if start_time >= end_time:
+                errors.append({"row": row_number, "field": "startTime/endTime", "detail": "startTime ต้องน้อยกว่า endTime"})
+
+        if category_id is None:
+            errors.append({"row": row_number, "field": "categoryId", "detail": "categoryId ต้องระบุ"})
+        else:
+            if CategoryRepository(self.db).get_by_id(category_id) is None:
+                errors.append({"row": row_number, "field": "categoryId", "detail": "ไม่พบหมวดหมู่ที่ต้องการ"})
+
+        status = "DRAFT"
+        if status_value:
+            normalized_status = status_value.strip().upper()
+            if normalized_status not in {"DRAFT", "PUBLISHED"}:
+                errors.append({"row": row_number, "field": "status", "detail": "status ต้องเป็น DRAFT หรือ PUBLISHED"})
+            else:
+                if normalized_status == "PUBLISHED" and current_user.role != "ADMIN":
+                    errors.append({"row": row_number, "field": "status", "detail": "เฉพาะ ADMIN เท่านั้นที่สามารถตั้ง status เป็น PUBLISHED ได้"})
+                else:
+                    status = normalized_status
+
+        if errors:
+            return None, errors
+
+        return (
+            {
+                "title": title,
+                "description": description,
+                "short_description": short_description,
+                "location_name": location_name,
+                "latitude": latitude,
+                "longitude": longitude,
+                "start_time": start_time,
+                "end_time": end_time,
+                "category_id": category_id,
+                "cover_image_url": cover_image_url,
+                "status": status,
+            },
+            [],
+        )
+
     def import_events_from_csv(self, file: UploadFile, default_status: str | None, current_user: User) -> dict:
         self._ensure_admin_or_organizer(current_user)
 
@@ -403,6 +488,64 @@ class EventService:
         return {
             "success": True,
             "message": "นำเข้าข้อมูล CSV สำเร็จ",
+            "data": {
+                "totalRecords": total_records,
+                "successRecords": success_records,
+                "failedRecords": failed_records,
+                "importLogId": import_log.id,
+                "errors": errors,
+            },
+        }
+
+    def import_events_from_json(self, payload: EventImportRequest, current_user: User) -> dict:
+        self._ensure_admin_or_organizer(current_user)
+
+        total_records = 0
+        success_records = 0
+        failed_records = 0
+        errors: list[dict] = []
+
+        for row_index, item in enumerate(payload.events, start=1):
+            total_records += 1
+            parsed, row_errors = self._parse_import_item(item, row_index, current_user)
+            if row_errors:
+                failed_records += 1
+                errors.extend(row_errors)
+                continue
+
+            try:
+                self.event_repo.create(
+                    title=parsed["title"],
+                    description=parsed["description"],
+                    short_description=parsed["short_description"],
+                    location_name=parsed["location_name"],
+                    latitude=parsed["latitude"],
+                    longitude=parsed["longitude"],
+                    start_time=parsed["start_time"],
+                    end_time=parsed["end_time"],
+                    status=parsed["status"],
+                    category_id=parsed["category_id"],
+                    organizer_id=current_user.id,
+                    cover_image_url=parsed["cover_image_url"],
+                )
+                success_records += 1
+            except Exception:
+                self.db.rollback()
+                failed_records += 1
+                errors.append({"row": row_index, "field": "json", "detail": "ไม่สามารถบันทึกกิจกรรมได้"})
+
+        import_log = EventImportLogRepository(self.db).create(
+            organizer_id=current_user.id,
+            total_records=total_records,
+            success_records=success_records,
+            failed_records=failed_records,
+            default_status=None,
+            file_name=None,
+        )
+
+        return {
+            "success": True,
+            "message": "นำเข้าข้อมูล JSON สำเร็จ",
             "data": {
                 "totalRecords": total_records,
                 "successRecords": success_records,
