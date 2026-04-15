@@ -488,6 +488,81 @@ def test_import_events_json_creates_events_and_returns_import_log():
     assert body["data"]["errors"] == []
 
 
+def test_import_events_csv_returns_failed_records_when_category_not_found():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_import_csv_invalid_category@events.com")
+
+    token = create_access_token_for_user(organizer)
+    csv_content = (
+        "title,description,shortDescription,locationName,latitude,longitude,startTime,endTime,categoryId,coverImageUrl,status\n"
+        "Row One,desc,short,Main Hall,15.0,100.0,2026-05-01T09:00:00+07:00,2026-05-01T12:00:00+07:00,99999,,DRAFT\n"
+        "Row Two,desc,short,Main Hall,15.0,100.0,2026-05-02T09:00:00+07:00,2026-05-02T12:00:00+07:00,99998,,DRAFT\n"
+    )
+
+    response = client.post(
+        "/api/v1/import/events/csv",
+        headers={"Authorization": f"Bearer {token}"},
+        data={"defaultStatus": "DRAFT"},
+        files={"file": ("events_invalid_category.csv", csv_content, "text/csv")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["totalRecords"] == 2
+    assert body["data"]["successRecords"] == 0
+    assert body["data"]["failedRecords"] == 2
+    assert body["data"]["importLogId"] > 0
+    assert len(body["data"]["errors"]) == 2
+    assert body["data"]["errors"][0]["row"] == 2
+    assert body["data"]["errors"][0]["field"] == "categoryId"
+    assert body["data"]["errors"][0]["detail"] == "ไม่พบหมวดหมู่ที่ต้องการ"
+    assert body["data"]["errors"][1]["row"] == 3
+    assert body["data"]["errors"][1]["field"] == "categoryId"
+    assert body["data"]["errors"][1]["detail"] == "ไม่พบหมวดหมู่ที่ต้องการ"
+
+
+def test_import_events_json_returns_failed_records_when_category_not_found():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "org_import_json_invalid_category@events.com")
+
+    token = create_access_token_for_user(organizer)
+    payload = {
+        "events": [
+            {
+                "title": "Python Workshop",
+                "description": "เวิร์กชอป Python",
+                "shortDescription": "ลงมือทำ",
+                "locationName": "SCI 501",
+                "latitude": 15.120245,
+                "longitude": 104.906928,
+                "startTime": "2026-04-10T09:00:00+07:00",
+                "endTime": "2026-04-10T12:00:00+07:00",
+                "categoryId": 99999,
+                "status": "DRAFT",
+            }
+        ]
+    }
+
+    response = client.post(
+        "/api/v1/import/events/json",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["totalRecords"] == 1
+    assert body["data"]["successRecords"] == 0
+    assert body["data"]["failedRecords"] == 1
+    assert body["data"]["importLogId"] > 0
+    assert len(body["data"]["errors"]) == 1
+    assert body["data"]["errors"][0]["row"] == 1
+    assert body["data"]["errors"][0]["field"] == "categoryId"
+    assert body["data"]["errors"][0]["detail"] == "ไม่พบหมวดหมู่ที่ต้องการ"
+
+
 def test_get_my_events_as_organizer():
     client = TestClient(app)
     organizer = create_user("ORGANIZER", "org_my_events@events.com")

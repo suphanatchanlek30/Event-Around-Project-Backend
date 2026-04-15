@@ -1,0 +1,3 @@
+title,description,shortDescription,locationName,latitude,longitude,startTime,endTime,categoryId,coverImageUrl,status
+Campus Tech Meetup,,,Main Auditorium,13.7563,100.5018,2026-06-01T18:00:00+07:00,2026-06-01T20:00:00+07:00,1,,
+Startup Pitch Night,Pitch event for early stage startup teams,Pitching and networking session,Innovation Center,13.7367,100.5231,2026-06-05T17:30:00+07:00,2026-06-05T21:00:00+07:00,1,https://example.com/images/pitch.jpg,DRAFT
