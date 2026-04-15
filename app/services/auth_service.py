@@ -1,10 +1,5 @@
 # app/services/auth_service.py
 
-from sqlalchemy.orm import Session
-
-from app.domain.auth_manager import AuthManager
-from app.domain.organizer import Organizer
-from app.domain.student import Student
 from app.core.exceptions import bad_request, conflict, forbidden, unauthorized
 from app.core.security import (
     create_access_token,
@@ -14,6 +9,9 @@ from app.core.security import (
     hash_token,
     verify_password,
 )
+from app.domain.auth_manager import AuthManager
+from app.domain.organizer import Organizer
+from app.domain.student import Student
 from app.models.user import User
 from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.user_repository import UserRepository
@@ -25,6 +23,7 @@ from app.schemas.auth import (
     RegisterStudentRequest,
     UpdateMeRequest,
 )
+from sqlalchemy.orm import Session
 
 
 class AuthService:
@@ -197,7 +196,7 @@ class AuthService:
                         "detail": "ไม่สามารถเข้าสู่ระบบด้วยข้อมูลนี้ได้",
                     }
                 ],
-            )
+            ) from None
 
         if not user.is_active:
             raise forbidden("บัญชีผู้ใช้งานถูกปิดการใช้งาน")

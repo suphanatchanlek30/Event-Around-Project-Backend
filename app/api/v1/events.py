@@ -1,6 +1,3 @@
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
-
 from app.core.database import get_db
 from app.core.security import get_current_user, get_optional_current_user
 from app.models.user import User
@@ -10,6 +7,8 @@ from app.schemas.event import (
     EventUpdateRequest,
 )
 from app.services.event_service import EventService
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/events", tags=["events"])
 

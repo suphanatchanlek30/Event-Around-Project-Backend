@@ -16,13 +16,13 @@ class Organizer(User):
     def get_organized_events(self) -> list:
         return self._organized_events
 
-    def create_event(self, event: "Event") -> None:
+    def create_event(self, event: Event) -> None:
         raise NotImplementedError("create_event is not implemented in skeleton phase.")
 
-    def remove_event(self, event: "Event") -> None:
+    def remove_event(self, event: Event) -> None:
         raise NotImplementedError("remove_event is not implemented in skeleton phase.")
 
-    def can_edit_event(self, event: "Event") -> bool:
+    def can_edit_event(self, event: Event) -> bool:
         raise NotImplementedError("can_edit_event is not implemented in skeleton phase.")
 
     def get_role(self) -> str:

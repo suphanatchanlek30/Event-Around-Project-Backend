@@ -1,9 +1,8 @@
 from datetime import datetime
 
+from app.core.database import Base
 from sqlalchemy import DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.core.database import Base
 
 
 class Event(Base):

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
 from app.domain.organizer import Organizer
 from app.domain.student import Student

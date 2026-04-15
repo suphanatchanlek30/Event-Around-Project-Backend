@@ -1,11 +1,10 @@
-from sqlalchemy.orm import Session
-
 from app.core.exceptions import bad_request, conflict, forbidden, not_found
 from app.domain.event_category import EventCategory as DomainEventCategory
 from app.models.event_category import EventCategory
 from app.models.user import User
 from app.repositories.category_repository import CategoryRepository
 from app.schemas.category import CategoryCreateRequest, CategoryUpdateRequest
+from sqlalchemy.orm import Session
 
 
 class CategoryService:

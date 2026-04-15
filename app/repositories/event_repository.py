@@ -1,12 +1,9 @@
 from datetime import datetime
 
-from datetime import datetime
-
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-
 from app.models.event import Event
 from app.models.event_save import EventSave
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 
 class EventRepository:
