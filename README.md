@@ -12,6 +12,7 @@
 - API ยืนยันตัวตน (Auth) ครบชุดเบื้องต้น
 - API หมวดหมู่กิจกรรม (Categories) ครบชุดพื้นฐาน
 - API บันทึกกิจกรรมโปรด (Saved Events)
+- API นำเข้ากิจกรรมจาก CSV และ JSON
 - โครงคลาส UML (Skeleton Phase) ครบชุดใน `app/domain`
 - สคริปต์ seed ข้อมูลตัวอย่าง
 - ชุดทดสอบเบื้องต้น
@@ -291,6 +292,22 @@ python -m pytest -ra -W default
 		- ถ้าไม่ส่ง token จะตอบ `401`
 		- ถ้า role ไม่ใช่ `ORGANIZER` หรือไม่ใช่เจ้าของกิจกรรม จะตอบ `403`
 		- ถ้าไม่พบกิจกรรม จะตอบ `404`
+
+## Import APIs ที่ทำแล้ว
+
+- POST /api/v1/import/events/csv
+	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
+	- รับไฟล์ `CSV` ผ่าน `form-data`
+	- รองรับ `defaultStatus` เป็น `DRAFT` หรือ `PUBLISHED`
+	- ถ้า `categoryId` ไม่ตรงกับข้อมูลจริง ระบบจะนับแถวนั้นเป็น failed
+	- ถ้า `ORGANIZER` ใส่ `status=PUBLISHED` ใน row นั้น จะถูกปฏิเสธ
+	- ถ้าโครงสร้าง CSV ผิด จะตอบ `400 bad csv format`
+- POST /api/v1/import/events/json
+	- ต้องเป็น `ADMIN` หรือ `ORGANIZER`
+	- รับ `application/json`
+	- ใช้โครงสร้าง `events` เป็น array ของข้อมูลกิจกรรม
+	- ถ้า `categoryId` ไม่ตรงกับข้อมูลจริง ระบบจะนับแถวนั้นเป็น failed
+	- ถ้าค่าใน row ไม่ถูกต้อง ระบบจะคืนรายละเอียด error ตาม field
 
 ## SavedEvent APIs ที่ทำแล้ว
 
