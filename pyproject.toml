@@ -1,0 +1,17 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+include = '\\.pyi?$'
+extend-exclude = '''
+/(\.git|\.venv|\.pytest_cache|alembic/versions)/
+'''
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["app", "tests", "alembic"]
+extend-exclude = ["alembic/versions", ".venv", ".pytest_cache"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "B008"]

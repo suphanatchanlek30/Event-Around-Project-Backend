@@ -1,10 +1,9 @@
-from sqlalchemy.orm import Session
-
 from app.core.exceptions import forbidden, not_found
 from app.domain.event_manager import EventManager
 from app.domain.organizer import Organizer as DomainOrganizer
 from app.models.user import User
 from app.repositories.organizer_repository import OrganizerRepository
+from sqlalchemy.orm import Session
 
 
 class OrganizerService:

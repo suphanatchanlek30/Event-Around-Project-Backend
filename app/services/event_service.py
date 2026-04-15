@@ -1,11 +1,8 @@
 import csv
 import io
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
-from fastapi import UploadFile
-from sqlalchemy.orm import Session
 
 from app.core.exceptions import bad_request, conflict, forbidden, not_found
 from app.domain.event import Event as DomainEvent
@@ -20,6 +17,8 @@ from app.repositories.category_repository import CategoryRepository
 from app.repositories.event_import_log_repository import EventImportLogRepository
 from app.repositories.event_repository import EventRepository
 from app.schemas.event import EventImportRequest
+from fastapi import UploadFile
+from sqlalchemy.orm import Session
 
 
 class EventService:
@@ -127,12 +126,12 @@ class EventService:
                         "detail": f"{field_name} ต้องเป็นรูปแบบ ISO 8601",
                     }
                 ],
-            )
+            ) from None
 
         if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
+            parsed = parsed.replace(tzinfo=UTC)
         else:
-            parsed = parsed.astimezone(timezone.utc)
+            parsed = parsed.astimezone(UTC)
 
         return parsed
 
@@ -274,13 +273,13 @@ class EventService:
 
         if start_time is not None and end_time is not None:
             if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=timezone.utc)
+                start_time = start_time.replace(tzinfo=UTC)
             else:
-                start_time = start_time.astimezone(timezone.utc)
+                start_time = start_time.astimezone(UTC)
             if end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=timezone.utc)
+                end_time = end_time.replace(tzinfo=UTC)
             else:
-                end_time = end_time.astimezone(timezone.utc)
+                end_time = end_time.astimezone(UTC)
             if start_time >= end_time:
                 errors.append({"row": row_number, "field": "startTime/endTime", "detail": "startTime ต้องน้อยกว่า endTime"})
 
@@ -351,13 +350,13 @@ class EventService:
 
         if start_time is not None and end_time is not None:
             if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=timezone.utc)
+                start_time = start_time.replace(tzinfo=UTC)
             else:
-                start_time = start_time.astimezone(timezone.utc)
+                start_time = start_time.astimezone(UTC)
             if end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=timezone.utc)
+                end_time = end_time.replace(tzinfo=UTC)
             else:
-                end_time = end_time.astimezone(timezone.utc)
+                end_time = end_time.astimezone(UTC)
             if start_time >= end_time:
                 errors.append({"row": row_number, "field": "startTime/endTime", "detail": "startTime ต้องน้อยกว่า endTime"})
 
@@ -428,7 +427,7 @@ class EventService:
                         "detail": "ไม่สามารถอ่านไฟล์ CSV ได้",
                     }
                 ],
-            )
+            ) from None
 
         if not self._validate_import_headers(reader.fieldnames):
             raise bad_request(
@@ -777,7 +776,6 @@ class EventService:
         if status_filter is not None:
             query = query.filter(Event.status == status_filter)
 
-        now = datetime.now(timezone.utc)
         if sort_by_field == "createdAt":
             query = query.order_by(Event.created_at.desc() if sort_order_value == "desc" else Event.created_at.asc())
         else:
@@ -840,7 +838,7 @@ class EventService:
         query = self.event_repo.get_query()
         query = query.filter(Event.status == "PUBLISHED")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         query = query.filter(Event.start_time > now)
 
         if category_id is not None:
@@ -895,7 +893,7 @@ class EventService:
         query = self.event_repo.get_query()
         query = query.filter(Event.status == "PUBLISHED")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         query = query.filter(Event.end_time > now)
 
         if category_id is not None:

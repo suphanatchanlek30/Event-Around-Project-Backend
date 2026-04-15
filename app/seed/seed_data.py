@@ -1,10 +1,9 @@
 # app/seed/seed_data.py
 
-from sqlalchemy.orm import Session
-
 from app.core.database import SessionLocal
-from app.models.user import User
 from app.core.security import get_password_hash
+from app.models.user import User
+from sqlalchemy.orm import Session
 
 
 def seed_users(db: Session):
