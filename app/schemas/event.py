@@ -42,6 +42,28 @@ class EventCreateRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class EventImportItem(BaseModel):
+    title: str
+    description: str | None = None
+    short_description: str | None = Field(None, alias="shortDescription")
+    location_name: str = Field(..., alias="locationName")
+    latitude: float
+    longitude: float
+    start_time: datetime = Field(..., alias="startTime")
+    end_time: datetime = Field(..., alias="endTime")
+    category_id: int = Field(..., alias="categoryId")
+    cover_image_url: str | None = Field(None, alias="coverImageUrl")
+    status: str | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+class EventImportRequest(BaseModel):
+    events: list[EventImportItem]
+
+    model_config = {"populate_by_name": True}
+
+
 class EventUpdateRequest(BaseModel):
     title: str | None = None
     description: str | None = None
