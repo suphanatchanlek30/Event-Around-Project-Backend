@@ -1,7 +1,5 @@
 import math
 
-from sqlalchemy.orm import Session
-
 from app.core.exceptions import bad_request, conflict, forbidden, not_found
 from app.domain.event import Event as DomainEvent
 from app.domain.event_category import EventCategory as DomainEventCategory
@@ -13,6 +11,7 @@ from app.models.event_save import EventSave
 from app.models.user import User
 from app.repositories.event_repository import EventRepository
 from app.repositories.saved_event_repository import SavedEventRepository
+from sqlalchemy.orm import Session
 
 
 class SavedEventService:

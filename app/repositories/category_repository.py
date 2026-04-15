@@ -1,7 +1,6 @@
+from app.models.event_category import EventCategory
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-
-from app.models.event_category import EventCategory
 
 
 class CategoryRepository:

@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-
 from app.models.refresh_token import RefreshToken
+from sqlalchemy.orm import Session
 
 
 class RefreshTokenRepository:

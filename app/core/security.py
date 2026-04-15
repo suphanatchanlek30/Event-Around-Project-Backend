@@ -1,19 +1,18 @@
 # app/core/security.py
 
-from passlib.context import CryptContext
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import uuid4
-
-from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import forbidden, unauthorized
 from app.repositories.user_repository import UserRepository
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -33,7 +32,7 @@ def hash_token(token: str) -> str:
 
 def create_access_token(user_id: int, role: str) -> tuple[str, int]:
     expires_in = settings.access_token_expire_minutes * 60
-    exp = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+    exp = datetime.now(UTC) + timedelta(seconds=expires_in)
     payload = {
         "sub": str(user_id),
         "role": role,
@@ -45,7 +44,7 @@ def create_access_token(user_id: int, role: str) -> tuple[str, int]:
 
 
 def create_refresh_token(user_id: int, role: str) -> tuple[str, datetime]:
-    exp_dt = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    exp_dt = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     payload = {
         "sub": str(user_id),
         "role": role,

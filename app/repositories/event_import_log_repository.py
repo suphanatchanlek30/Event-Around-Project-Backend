@@ -1,6 +1,5 @@
-from sqlalchemy.orm import Session
-
 from app.models.event_import_log import EventImportLog
+from sqlalchemy.orm import Session
 
 
 class EventImportLogRepository:

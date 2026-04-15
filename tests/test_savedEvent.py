@@ -1,9 +1,4 @@
-from datetime import datetime, timezone
-
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from datetime import UTC, datetime
 
 from app.core.database import Base, get_db
 from app.core.security import create_access_token
@@ -12,7 +7,10 @@ from app.models.event import Event
 from app.models.event_category import EventCategory
 from app.models.event_save import EventSave
 from app.models.user import User
-
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 engine = create_engine(
 	"sqlite://",
@@ -85,8 +83,8 @@ def create_event(
 			location_name="SCI Building",
 			latitude=15.120245,
 			longitude=104.906928,
-			start_time=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
-			end_time=datetime(2026, 4, 10, 12, 0, tzinfo=timezone.utc),
+			start_time=datetime(2026, 4, 10, 9, 0, tzinfo=UTC),
+			end_time=datetime(2026, 4, 10, 12, 0, tzinfo=UTC),
 			status=status,
 			category_id=category_id,
 			organizer_id=organizer_id,

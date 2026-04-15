@@ -1,9 +1,4 @@
-from datetime import datetime, timedelta, timezone
-
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from datetime import UTC, datetime, timedelta
 
 from app.core.database import Base, get_db
 from app.core.security import create_access_token
@@ -12,7 +7,10 @@ from app.models.event import Event
 from app.models.event_category import EventCategory
 from app.models.event_save import EventSave
 from app.models.user import User
-
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 engine = create_engine(
     "sqlite://",
@@ -130,8 +128,8 @@ def test_list_events_returns_published_only_and_meta():
     organizer = create_user("ORGANIZER", "org@events.com")
     category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
 
-    start_time = datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc)
-    end_time = datetime(2026, 4, 10, 12, 0, tzinfo=timezone.utc)
+    start_time = datetime(2026, 4, 10, 9, 0, tzinfo=UTC)
+    end_time = datetime(2026, 4, 10, 12, 0, tzinfo=UTC)
     create_event(
         title="Python Workshop",
         category_id=category.id,
@@ -163,8 +161,8 @@ def test_get_event_detail_published_event_returns_detail():
     client = TestClient(app)
     organizer = create_user("ORGANIZER", "org_detail@events.com")
     category = create_category("Seminar", "กิจกรรมสัมมนา")
-    start_time = datetime(2026, 5, 10, 9, 0, tzinfo=timezone.utc)
-    end_time = datetime(2026, 5, 10, 12, 0, tzinfo=timezone.utc)
+    start_time = datetime(2026, 5, 10, 9, 0, tzinfo=UTC)
+    end_time = datetime(2026, 5, 10, 12, 0, tzinfo=UTC)
     event = create_event(
         title="Data Science Seminar",
         category_id=category.id,
@@ -191,8 +189,8 @@ def test_get_event_detail_returns_is_saved_for_student():
     student = create_user("STUDENT", "student@example.com")
     organizer = create_user("ORGANIZER", "org_event@events.com")
     category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
-    start_time = datetime(2026, 6, 1, 9, 0, tzinfo=timezone.utc)
-    end_time = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+    start_time = datetime(2026, 6, 1, 9, 0, tzinfo=UTC)
+    end_time = datetime(2026, 6, 1, 12, 0, tzinfo=UTC)
     event = create_event(
         title="AI Workshop",
         category_id=category.id,
@@ -220,8 +218,8 @@ def test_get_event_detail_unpublished_returns_404_for_anonymous():
     client = TestClient(app)
     organizer = create_user("ORGANIZER", "org_draft@events.com")
     category = create_category("Seminar", "กิจกรรมสัมมนา")
-    start_time = datetime(2026, 7, 1, 9, 0, tzinfo=timezone.utc)
-    end_time = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+    start_time = datetime(2026, 7, 1, 9, 0, tzinfo=UTC)
+    end_time = datetime(2026, 7, 1, 12, 0, tzinfo=UTC)
     event = create_event(
         title="Secret Event",
         category_id=category.id,
@@ -278,8 +276,8 @@ def test_organizer_owner_can_update_event():
         title="Python Workshop",
         category_id=category.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=UTC),
         status="DRAFT",
     )
     token = create_access_token_for_user(organizer)
@@ -315,8 +313,8 @@ def test_admin_can_update_any_event():
         title="Organizer Event",
         category_id=category.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 5, 10, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 5, 10, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 5, 10, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 5, 10, 12, 0, tzinfo=UTC),
         status="DRAFT",
     )
     token = create_access_token_for_user(admin)
@@ -375,8 +373,8 @@ def test_admin_can_publish_draft_event():
         title="Draft Workshop",
         category_id=category.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 8, 1, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 8, 1, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 8, 1, 12, 0, tzinfo=UTC),
         status="DRAFT",
     )
     token = create_access_token_for_user(admin)
@@ -402,8 +400,8 @@ def test_admin_can_cancel_event_with_reason():
         title="Cancelable Event",
         category_id=category.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 9, 1, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 9, 1, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 9, 1, 12, 0, tzinfo=UTC),
         status="PUBLISHED",
     )
     token = create_access_token_for_user(admin)
@@ -423,7 +421,7 @@ def test_admin_can_cancel_event_with_reason():
 def test_import_events_csv_creates_events_and_returns_import_log():
     client = TestClient(app)
     organizer = create_user("ORGANIZER", "org_import@events.com")
-    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+    create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
     create_category("Seminar", "กิจกรรมสัมมนา")
 
     token = create_access_token_for_user(organizer)
@@ -569,20 +567,20 @@ def test_get_my_events_as_organizer():
     category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
 
     # Create events for the organizer
-    event1 = create_event(
+    create_event(
         title="My Workshop 1",
         category_id=category.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=UTC),
         status="PUBLISHED",
     )
-    event2 = create_event(
+    create_event(
         title="My Workshop 2",
         category_id=category.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 4, 15, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 4, 15, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 15, 12, 0, tzinfo=UTC),
         status="DRAFT",
     )
 
@@ -592,8 +590,8 @@ def test_get_my_events_as_organizer():
         title="Other Workshop",
         category_id=category.id,
         organizer_id=other_organizer.id,
-        start_time=datetime(2026, 4, 20, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 4, 20, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 20, 12, 0, tzinfo=UTC),
         status="PUBLISHED",
     )
 
@@ -634,7 +632,7 @@ def test_get_upcoming_events():
     category = create_category("Seminar", "กิจกรรมสัมมนา")
 
     # Create upcoming event (future start time)
-    future_time = datetime.now(timezone.utc) + timedelta(days=7)
+    future_time = datetime.now(UTC) + timedelta(days=7)
     upcoming_event = create_event(
         title="Future Seminar",
         category_id=category.id,
@@ -645,7 +643,7 @@ def test_get_upcoming_events():
     )
 
     # Create past event (should not appear)
-    past_time = datetime.now(timezone.utc) - timedelta(days=1)
+    past_time = datetime.now(UTC) - timedelta(days=1)
     create_event(
         title="Past Seminar",
         category_id=category.id,
@@ -673,7 +671,7 @@ def test_get_active_events():
     category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
 
     # Create active event (ongoing)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     active_event = create_event(
         title="Ongoing Workshop",
         category_id=category.id,
@@ -684,7 +682,7 @@ def test_get_active_events():
     )
 
     # Create ended event (should not appear)
-    ended_event = create_event(
+    create_event(
         title="Ended Workshop",
         category_id=category.id,
         organizer_id=organizer.id,
@@ -711,28 +709,25 @@ def test_list_events_filters_search_category_date_and_sort():
     workshop = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
     seminar = create_category("Seminar", "กิจกรรมสัมมนา")
 
-    now = datetime(2026, 4, 1, 0, 0, tzinfo=timezone.utc)
-    later = now + timedelta(days=9)
     create_event(
         title="Python Workshop",
         category_id=workshop.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 4, 10, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 10, 12, 0, tzinfo=UTC),
         status="PUBLISHED",
     )
     create_event(
         title="Java Seminar",
         category_id=seminar.id,
         organizer_id=organizer.id,
-        start_time=datetime(2026, 4, 15, 9, 0, tzinfo=timezone.utc),
-        end_time=datetime(2026, 4, 15, 11, 0, tzinfo=timezone.utc),
+        start_time=datetime(2026, 4, 15, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 15, 11, 0, tzinfo=UTC),
         status="PUBLISHED",
     )
 
     response = client.get(
-        "/api/v1/events?search=python&categoryId=%s&status=PUBLISHED&startFrom=2026-04-01T00:00:00Z&endTo=2026-04-30T23:59:59Z&sortBy=startTime&sortOrder=asc"
-        % workshop.id,
+        f"/api/v1/events?search=python&categoryId={workshop.id}&status=PUBLISHED&startFrom=2026-04-01T00:00:00Z&endTo=2026-04-30T23:59:59Z&sortBy=startTime&sortOrder=asc",
     )
 
     assert response.status_code == 200
@@ -756,7 +751,7 @@ def test_get_nearby_events():
     category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
 
     # Create event with specific location
-    future_time = datetime.now(timezone.utc) + timedelta(days=7)
+    future_time = datetime.now(UTC) + timedelta(days=7)
     event = create_event(
         title="Nearby Workshop",
         category_id=category.id,
@@ -794,7 +789,7 @@ def test_get_map_events():
     category = create_category("Seminar", "กิจกรรมสัมมนา")
 
     # Create event with specific location
-    future_time = datetime.now(timezone.utc) + timedelta(days=7)
+    future_time = datetime.now(UTC) + timedelta(days=7)
     event = create_event(
         title="Map Seminar",
         category_id=category.id,

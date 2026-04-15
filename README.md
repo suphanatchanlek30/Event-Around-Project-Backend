@@ -24,6 +24,51 @@
 - Alembic
 - Docker
 
+## วิเคราะห์โปรเจกต์ปัจจุบัน
+- ตอนนี้รัน local ได้ด้วย FastAPI + Docker PostgreSQL + ไฟล์ `.env` เดิม
+- โค้ดส่วน config และ database ยังถูกรวมอยู่ใน `app/core` เป็นหลัก
+- ยังไม่มีชั้นสำหรับ Render โดยตรง เช่น CORS, port จาก environment, และ blueprint สำหรับ deploy
+- ยังไม่มี CI/CD workflow ที่แยกหน้าที่ชัดเจนระหว่างตรวจโค้ดกับ deploy
+
+## โครงสร้างเป้าหมาย
+- `app/core/settings.py` เก็บ config จาก environment และคำนวณ `DATABASE_URL` ให้ถูกทั้ง local และ production
+- `app/db/` เก็บ `Base`, `engine`, `SessionLocal`, และ `get_db`
+- `app/main.py` เป็นจุดเริ่ม app, ใส่ CORS, และ health endpoint สำหรับตรวจสถานะ
+- `alembic/env.py` ใช้ `DATABASE_URL` จาก environment โดยตรง
+- `.github/workflows/ci.yml` ใช้ตรวจ lint, format, test, และ migration validation
+- `render.yaml` ใช้เป็น Render Blueprint สำหรับ web service + PostgreSQL
+
+## CI/CD Architecture
+- **CI** ใช้ GitHub Actions เท่านั้น
+	- รันตอน `pull_request` และ `push` เข้า `main`
+	- ตรวจ dependencies, lint, format check, test, และ migration validation
+- **CD** ใช้ Render auto deploy หลัง merge เข้า `main`
+	- Render จะ build จาก `Dockerfile`
+	- ใช้ Render PostgreSQL ใน production
+	- รัน `alembic upgrade head` ก่อนเริ่ม service เพื่อให้ schema ตรงกับโค้ด
+- **Secrets**
+	- ฝั่ง GitHub เก็บเฉพาะ secrets ที่ workflow ต้องใช้จริง
+	- ฝั่ง Render เก็บ production secrets เช่น `JWT_SECRET_KEY` และ `CORS_ORIGINS`
+
+## ไฟล์สำคัญที่เพิ่ม/แก้
+- `app/core/settings.py` สำหรับอ่านค่าจาก environment และสร้าง `DATABASE_URL`
+- `app/db/base.py` และ `app/db/session.py` สำหรับ SQLAlchemy engine/session
+- `app/main.py` สำหรับ CORS และ health endpoint
+- `render.yaml` สำหรับ Render Blueprint
+- `.github/workflows/ci.yml` สำหรับ CI บน GitHub Actions
+- `pyproject.toml` และ `pytest.ini` สำหรับกติกา lint/test
+- `requirements-dev.txt` สำหรับเครื่องมือ dev เช่น `ruff` และ `black`
+- `.env.example` สำหรับตัวอย่าง config ที่ไม่ใช่ secret
+
+## วิธี deploy บน Render แบบสั้น
+1. Push code ขึ้น GitHub
+2. สร้าง Render PostgreSQL
+3. สร้าง Web Service จาก repo นี้ หรือใช้ `render.yaml`
+4. ตั้งค่า environment variables บน Render
+5. เปิด Auto Deploy ให้ merge เข้า `main` แล้ว deploy อัตโนมัติ
+6. ตรวจ health endpoint ที่ `/health`
+7. นำ base URL ของ Render ไปให้ frontend เรียกใช้งาน
+
 ## ความสัมพันธ์กับ UML
 - โปรเจกต์มีโครง UML แยกใน `app/domain` เพื่อเตรียม OOP เต็มรูปแบบ
 - ในเฟสนี้ คลาสใน `app/domain` เป็น skeleton (method signatures ครบ แต่ยังไม่ลง business logic ลึก)
@@ -147,6 +192,18 @@ make run
 make test
 ```
 
+ตรวจ lint:
+
+```bash
+make lint
+```
+
+จัด format โค้ด:
+
+```bash
+make format
+```
+
 หรือรันตรง:
 
 ```bash
@@ -201,6 +258,10 @@ python -m pytest -ra -W default
 ## คู่มือทดสอบ API แยกไฟล์
 
 ดูวิธีรันและทดสอบ API แบบละเอียดที่ไฟล์ **[TEST_API.md](TEST_API.md)**
+
+## คู่มือ Deploy แยกไฟล์
+
+ดูวิธี deploy ตั้งแต่ local จนขึ้น Render จริงที่ไฟล์ **[DEPLOY_RENDER.md](DEPLOY_RENDER.md)**
 
 ## Auth APIs ที่ทำแล้ว
 

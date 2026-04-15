@@ -1,5 +1,6 @@
 import math
 
+
 class LocationService:
     def calculate_distance(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         # Haversine formula to calculate distance between two points on Earth
