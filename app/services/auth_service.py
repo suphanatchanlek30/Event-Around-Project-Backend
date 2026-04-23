@@ -86,6 +86,8 @@ class AuthService:
             "role": user.role,
             "isActive": user.is_active,
             "profileImageUrl": user.profile_image_url,
+            "createdAt": user.created_at,
+            "updatedAt": user.updated_at,
         }
 
     def _issue_tokens(self, user: User) -> dict:

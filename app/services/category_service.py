@@ -30,6 +30,9 @@ class CategoryService:
             "name": category.name,
             "description": category.description,
             "isActive": category.is_active,
+            "eventCount": self.category_repo.count_events_by_category(category.id),
+            "createdAt": category.created_at,
+            "updatedAt": category.updated_at,
         }
 
     def _parse_include_inactive(self, include_inactive: str | None) -> bool:

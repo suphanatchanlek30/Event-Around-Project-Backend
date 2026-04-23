@@ -1,5 +1,7 @@
 # app/schemas/auth.py
 
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
 
@@ -90,6 +92,8 @@ class MeResponseData(BaseModel):
     role: str
     is_active: bool = Field(..., alias="isActive")
     profile_image_url: str | None = Field(default=None, alias="profileImageUrl")
+    created_at: datetime = Field(..., alias="createdAt")
+    updated_at: datetime = Field(..., alias="updatedAt")
 
     model_config = {
         "populate_by_name": True

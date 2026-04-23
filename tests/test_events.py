@@ -137,6 +137,8 @@ def test_list_events_returns_published_only_and_meta():
         start_time=start_time,
         end_time=end_time,
         status="PUBLISHED",
+        cover_image_url="https://example.com/python-workshop.jpg",
+        short_description="เรียน Python แบบลงมือทำ",
     )
     create_event(
         title="Draft Event",
@@ -155,6 +157,9 @@ def test_list_events_returns_published_only_and_meta():
     assert body["meta"]["totalItems"] == 1
     assert body["meta"]["page"] == 1
     assert body["data"][0]["title"] == "Python Workshop"
+    assert body["data"][0]["description"] == ""
+    assert body["data"][0]["coverImageUrl"] == "https://example.com/python-workshop.jpg"
+    assert body["data"][0]["shortDescription"] == "เรียน Python แบบลงมือทำ"
 
 
 def test_get_event_detail_published_event_returns_detail():
@@ -171,6 +176,7 @@ def test_get_event_detail_published_event_returns_detail():
         end_time=end_time,
         status="PUBLISHED",
         description="A seminar about data science.",
+        cover_image_url="https://example.com/data-science.jpg",
     )
 
     response = client.get(f"/api/v1/events/{event.id}")
@@ -180,8 +186,147 @@ def test_get_event_detail_published_event_returns_detail():
     assert body["success"] is True
     assert body["data"]["eventId"] == event.id
     assert body["data"]["title"] == "Data Science Seminar"
+    assert body["data"]["coverImageUrl"] == "https://example.com/data-science.jpg"
+    assert body["data"]["cancelReason"] is None
     assert body["data"]["savedCount"] == 0
     assert body["data"]["isSaved"] is False
+
+
+def test_get_my_events_includes_cover_image_url():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "myevents_org@example.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+    create_event(
+        title="Owner Event",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 4, 15, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 15, 12, 0, tzinfo=UTC),
+        status="PUBLISHED",
+        cover_image_url="https://example.com/owner-event.jpg",
+    )
+    token = create_access_token_for_user(organizer)
+
+    response = client.get(
+        "/api/v1/events/my-events",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"][0]["coverImageUrl"] == "https://example.com/owner-event.jpg"
+    assert body["data"][0]["locationName"] == "SCI Building Room 501"
+    assert body["data"][0]["category"]["name"] == "Workshop"
+    assert body["data"][0]["organizer"]["userId"] == organizer.id
+
+
+def test_get_upcoming_events_includes_cover_image_url():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "upcoming_org@example.com")
+    category = create_category("Hackathon", "กิจกรรมแข่งขัน")
+    now = datetime.now(UTC)
+    create_event(
+        title="Upcoming Hackathon",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=now + timedelta(days=5),
+        end_time=now + timedelta(days=5, hours=3),
+        status="PUBLISHED",
+        cover_image_url="https://example.com/upcoming.jpg",
+    )
+
+    response = client.get("/api/v1/events/upcoming")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"][0]["coverImageUrl"] == "https://example.com/upcoming.jpg"
+    assert body["data"][0]["category"]["name"] == "Hackathon"
+    assert body["data"][0]["organizer"]["userId"] == organizer.id
+    assert "savedCount" in body["data"][0]
+
+
+def test_get_active_events_includes_cover_image_url():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "active_org@example.com")
+    category = create_category("Seminar", "กิจกรรมสัมมนา")
+    now = datetime.now(UTC)
+    create_event(
+        title="Active Seminar",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=now - timedelta(hours=1),
+        end_time=now + timedelta(hours=2),
+        status="PUBLISHED",
+        cover_image_url="https://example.com/active.jpg",
+    )
+
+    response = client.get("/api/v1/events/active")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"][0]["coverImageUrl"] == "https://example.com/active.jpg"
+    assert body["data"][0]["category"]["name"] == "Seminar"
+    assert body["data"][0]["organizer"]["userId"] == organizer.id
+    assert "savedCount" in body["data"][0]
+
+
+def test_get_nearby_events_includes_cover_image_url():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "nearby_org@example.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+    create_event(
+        title="Nearby Event",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 4, 20, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 20, 12, 0, tzinfo=UTC),
+        status="PUBLISHED",
+        cover_image_url="https://example.com/nearby.jpg",
+        latitude=15.120245,
+        longitude=104.906928,
+    )
+
+    response = client.get(
+        "/api/v1/events/nearby?latitude=15.120100&longitude=104.905800&radiusKm=5"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"][0]["coverImageUrl"] == "https://example.com/nearby.jpg"
+    assert body["data"][0]["status"] == "PUBLISHED"
+    assert body["data"][0]["organizer"]["userId"] == organizer.id
+
+
+def test_get_map_events_includes_cover_image_url():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "map_org@example.com")
+    category = create_category("Workshop", "กิจกรรมฝึกปฏิบัติ")
+    create_event(
+        title="Map Event",
+        category_id=category.id,
+        organizer_id=organizer.id,
+        start_time=datetime(2026, 4, 20, 9, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 20, 12, 0, tzinfo=UTC),
+        status="PUBLISHED",
+        cover_image_url="https://example.com/map.jpg",
+        latitude=15.120245,
+        longitude=104.906928,
+    )
+
+    response = client.get(
+        "/api/v1/events/map?latitude=15.120100&longitude=104.905800&radiusKm=5"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"][0]["coverImageUrl"] == "https://example.com/map.jpg"
+    assert body["data"][0]["status"] == "PUBLISHED"
+    assert body["data"][0]["category"]["name"] == "Workshop"
 
 
 def test_get_event_detail_returns_is_saved_for_student():
