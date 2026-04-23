@@ -1,5 +1,5 @@
-from app.models.event_category import EventCategory
 from app.models.event import Event
+from app.models.event_category import EventCategory
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 

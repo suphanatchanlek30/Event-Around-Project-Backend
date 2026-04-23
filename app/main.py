@@ -1,8 +1,9 @@
 # app/main.py
 
+from datetime import UTC, datetime
+
 from app.api.v1.api import api_router
 from app.core.settings import settings
-from datetime import UTC, datetime
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
