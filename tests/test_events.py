@@ -5,6 +5,7 @@ from app.core.security import create_access_token
 from app.main import app
 from app.models.event import Event
 from app.models.event_category import EventCategory
+from app.models.event_import_log import EventImportLog
 from app.models.event_save import EventSave
 from app.models.user import User
 from fastapi.testclient import TestClient
@@ -114,6 +115,32 @@ def create_event_save(event_id: int, user_id: int) -> EventSave:
         db.commit()
         db.refresh(event_save)
         return event_save
+    finally:
+        db.close()
+
+
+def create_import_log(
+    organizer_id: int,
+    total_records: int,
+    success_records: int,
+    failed_records: int,
+    default_status: str | None = None,
+    file_name: str | None = None,
+) -> EventImportLog:
+    db = TestingSessionLocal()
+    try:
+        import_log = EventImportLog(
+            organizer_id=organizer_id,
+            total_records=total_records,
+            success_records=success_records,
+            failed_records=failed_records,
+            default_status=default_status,
+            file_name=file_name,
+        )
+        db.add(import_log)
+        db.commit()
+        db.refresh(import_log)
+        return import_log
     finally:
         db.close()
 
@@ -704,6 +731,120 @@ def test_import_events_json_returns_failed_records_when_category_not_found():
     assert body["data"]["errors"][0]["row"] == 1
     assert body["data"]["errors"][0]["field"] == "categoryId"
     assert body["data"]["errors"][0]["detail"] == "ไม่พบหมวดหมู่ที่ต้องการ"
+
+
+def test_get_import_history_as_organizer_returns_only_own_logs():
+    client = TestClient(app)
+    organizer = create_user("ORGANIZER", "organizer_history@events.com")
+    other_organizer = create_user("ORGANIZER", "other_history@events.com")
+    create_import_log(
+        organizer_id=organizer.id,
+        total_records=3,
+        success_records=2,
+        failed_records=1,
+        default_status="DRAFT",
+        file_name="my-events.csv",
+    )
+    create_import_log(
+        organizer_id=other_organizer.id,
+        total_records=4,
+        success_records=4,
+        failed_records=0,
+        default_status="PUBLISHED",
+        file_name="other-events.csv",
+    )
+    token = create_access_token_for_user(organizer)
+
+    response = client.get(
+        "/api/v1/import/history",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["message"] == "ดึงประวัติการนำเข้าสำเร็จ"
+    assert body["meta"]["totalItems"] == 1
+    assert len(body["data"]) == 1
+    assert body["meta"]["summary"]["type"]["csv"] == 1
+    assert body["meta"]["summary"]["type"]["json"] == 0
+    assert body["meta"]["summary"]["status"]["partialSuccess"] == 1
+    assert body["data"][0]["fileName"] == "my-events.csv"
+    assert body["data"][0]["importNo"] == f"#{body['data'][0]['importLogId']}"
+    assert body["data"][0]["importType"] == "CSV"
+    assert body["data"][0]["defaultStatus"] == "DRAFT"
+    assert body["data"][0]["status"] == "PARTIAL_SUCCESS"
+    assert body["data"][0]["statusLabel"] == "มีข้อผิดพลาด"
+    assert body["data"][0]["statusTone"] == "warning"
+    assert body["data"][0]["hasErrors"] is True
+    assert body["data"][0]["metrics"]["processedRecords"] == 3
+    assert body["data"][0]["metrics"]["pendingRecords"] == 0
+    assert body["data"][0]["metrics"]["successRate"] == 66.67
+    assert body["data"][0]["source"]["type"] == "CSV"
+    assert body["data"][0]["display"]["importId"] == f"#{body['data'][0]['importLogId']}"
+    assert body["data"][0]["importedBy"]["userId"] == organizer.id
+
+
+def test_get_import_history_as_admin_returns_all_logs_latest_first():
+    client = TestClient(app)
+    admin = create_user("ADMIN", "admin_history@events.com")
+    organizer = create_user("ORGANIZER", "organizer_history_admin@events.com")
+    first_log = create_import_log(
+        organizer_id=organizer.id,
+        total_records=2,
+        success_records=2,
+        failed_records=0,
+        default_status="DRAFT",
+        file_name="first.csv",
+    )
+    second_log = create_import_log(
+        organizer_id=admin.id,
+        total_records=5,
+        success_records=4,
+        failed_records=1,
+        default_status=None,
+        file_name=None,
+    )
+    token = create_access_token_for_user(admin)
+
+    response = client.get(
+        "/api/v1/import/history",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["success"] is True
+    assert body["meta"]["totalItems"] == 2
+    assert body["meta"]["summary"]["type"]["csv"] == 1
+    assert body["meta"]["summary"]["type"]["json"] == 1
+    assert body["meta"]["summary"]["status"]["success"] == 1
+    assert body["meta"]["summary"]["status"]["partialSuccess"] == 1
+    assert len(body["data"]) == 2
+    assert body["data"][0]["importLogId"] == second_log.id
+    assert body["data"][1]["importLogId"] == first_log.id
+    assert body["data"][0]["importType"] == "JSON"
+    assert body["data"][0]["status"] == "PARTIAL_SUCCESS"
+    assert body["data"][0]["importedBy"]["role"] == "ADMIN"
+    assert body["data"][1]["importType"] == "CSV"
+    assert body["data"][1]["status"] == "SUCCESS"
+    assert body["data"][1]["statusLabel"] == "สำเร็จ"
+    assert body["data"][1]["statusTone"] == "success"
+    assert body["data"][1]["importedBy"]["role"] == "ORGANIZER"
+
+
+def test_get_import_history_student_forbidden():
+    client = TestClient(app)
+    student = create_user("STUDENT", "student_history@events.com")
+    token = create_access_token_for_user(student)
+
+    response = client.get(
+        "/api/v1/import/history",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["success"] is False
 
 
 def test_get_my_events_as_organizer():
