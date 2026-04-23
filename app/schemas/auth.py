@@ -1,6 +1,6 @@
 # app/schemas/auth.py
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 
 
 class RegisterStudentRequest(BaseModel):
@@ -45,7 +45,7 @@ class LogoutRequest(RefreshTokenRequest):
 
 class UpdateMeRequest(BaseModel):
     full_name: str | None = Field(default=None, alias="fullName", min_length=1, max_length=255)
-    profile_image_url: str | None = Field(default=None, alias="profileImageUrl", max_length=500)
+    profile_image_url: HttpUrl | None = Field(default=None, alias="profileImageUrl")
 
     @field_validator("full_name")
     @classmethod
@@ -77,6 +77,29 @@ class StudentResponseData(BaseModel):
     full_name: str = Field(..., alias="fullName")
     email: EmailStr
     role: str
+
+    model_config = {
+        "populate_by_name": True
+    }
+
+
+class MeResponseData(BaseModel):
+    user_id: int = Field(..., alias="userId")
+    full_name: str = Field(..., alias="fullName")
+    email: EmailStr
+    role: str
+    is_active: bool = Field(..., alias="isActive")
+    profile_image_url: str | None = Field(default=None, alias="profileImageUrl")
+
+    model_config = {
+        "populate_by_name": True
+    }
+
+
+class MeResponse(BaseModel):
+    success: bool
+    message: str
+    data: MeResponseData
 
     model_config = {
         "populate_by_name": True

@@ -7,6 +7,7 @@ from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
     LogoutRequest,
+    MeResponse,
     RefreshTokenRequest,
     RegisterOrganizerRequest,
     RegisterStudentRequest,
@@ -53,7 +54,7 @@ def logout(
     return service.logout(payload.refresh_token)
 
 
-@router.get("/me", status_code=status.HTTP_200_OK)
+@router.get("/me", status_code=status.HTTP_200_OK, response_model=MeResponse)
 def get_me(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -62,7 +63,7 @@ def get_me(
     return service.get_me(current_user)
 
 
-@router.patch("/me", status_code=status.HTTP_200_OK)
+@router.patch("/me", status_code=status.HTTP_200_OK, response_model=MeResponse)
 def update_me(
     payload: UpdateMeRequest,
     db: Session = Depends(get_db),

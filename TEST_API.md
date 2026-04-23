@@ -183,15 +183,14 @@ Authorization: Bearer {{accessToken}}
 ```json
 {
   "success": true,
-  "message": "Profile retrieved successfully",
+  "message": "ดึงข้อมูลผู้ใช้สำเร็จ",
   "data": {
     "userId": 1,
     "fullName": "Somying Student",
     "email": "somying@student.com",
     "role": "STUDENT",
-    "profileImageUrl": null,
-    "createdAt": "2026-04-10T10:00:00",
-    "updatedAt": "2026-04-10T10:00:00"
+    "isActive": true,
+    "profileImageUrl": "https://example.com/profile.jpg"
   }
 }
 ```
