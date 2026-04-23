@@ -1,7 +1,8 @@
 # app/api/v1/health.py
 
-from app.core.settings import settings
 from datetime import UTC, datetime
+
+from app.core.settings import settings
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/health", tags=["health"])
