@@ -2,8 +2,8 @@ from datetime import UTC, datetime
 
 from app.core.database import Base, get_db
 from app.core.security import create_access_token
-from app.models.event import Event
 from app.main import app
+from app.models.event import Event
 from app.models.event_category import EventCategory
 from app.models.user import User
 from fastapi.testclient import TestClient
