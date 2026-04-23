@@ -25,6 +25,7 @@ class EventService:
     def __init__(self, db: Session):
         self.db = db
         self.event_repo = EventRepository(db)
+        self.event_import_log_repo = EventImportLogRepository(db)
 
     def _parse_page(self, page: int | None) -> int:
         if page is None:
@@ -475,7 +476,7 @@ class EventService:
                 failed_records += 1
                 errors.append({"row": row_index, "field": "csv", "detail": "ไม่สามารถบันทึกกิจกรรมได้"})
 
-        import_log = EventImportLogRepository(self.db).create(
+        import_log = self.event_import_log_repo.create(
             organizer_id=current_user.id,
             total_records=total_records,
             success_records=success_records,
@@ -533,7 +534,7 @@ class EventService:
                 failed_records += 1
                 errors.append({"row": row_index, "field": "json", "detail": "ไม่สามารถบันทึกกิจกรรมได้"})
 
-        import_log = EventImportLogRepository(self.db).create(
+        import_log = self.event_import_log_repo.create(
             organizer_id=current_user.id,
             total_records=total_records,
             success_records=success_records,
@@ -723,6 +724,130 @@ class EventService:
         )
         student._saved_events = saved_event_ids
         return student
+
+    def _to_import_log_response(self, log) -> dict:
+        success_records = log.success_records
+        failed_records = log.failed_records
+        total_records = log.total_records
+        processed_records = success_records + failed_records
+
+        if total_records > 0 and processed_records < total_records:
+            result_status = "PROCESSING"
+            status_label = "กำลังประมวลผล"
+            status_tone = "info"
+        elif total_records > 0 and failed_records == 0 and success_records == total_records:
+            result_status = "SUCCESS"
+            status_label = "สำเร็จ"
+            status_tone = "success"
+        elif total_records > 0 and success_records == 0 and failed_records == total_records:
+            result_status = "FAILED"
+            status_label = "ล้มเหลว"
+            status_tone = "danger"
+        else:
+            result_status = "PARTIAL_SUCCESS"
+            status_label = "มีข้อผิดพลาด"
+            status_tone = "warning"
+
+        import_type = "CSV" if log.file_name else "JSON"
+        success_rate = round((success_records / total_records) * 100, 2) if total_records > 0 else 0.0
+
+        return {
+            "importLogId": log.id,
+            "importNo": f"#{log.id}",
+            "importType": import_type,
+            "totalRecords": total_records,
+            "successRecords": success_records,
+            "failedRecords": failed_records,
+            "defaultStatus": log.default_status,
+            "fileName": log.file_name,
+            "createdAt": log.created_at,
+            "status": result_status,
+            "statusLabel": status_label,
+            "statusTone": status_tone,
+            "hasErrors": failed_records > 0,
+            "metrics": {
+                "processedRecords": processed_records,
+                "pendingRecords": max(total_records - processed_records, 0),
+                "successRate": success_rate,
+            },
+            "source": {
+                "type": import_type,
+                "fileName": log.file_name,
+                "defaultStatus": log.default_status,
+            },
+            "display": {
+                "importId": f"#{log.id}",
+                "title": log.file_name or f"{import_type} Import #{log.id}",
+                "subtitle": f"{import_type} import by {log.organizer.full_name}",
+            },
+            "importedBy": {
+                "userId": log.organizer.id,
+                "fullName": log.organizer.full_name,
+                "email": log.organizer.email,
+                "role": log.organizer.role,
+            },
+        }
+
+    def get_import_history(
+        self,
+        page: int | None,
+        page_size: int | None,
+        current_user: User,
+    ) -> dict:
+        self._ensure_admin_or_organizer(current_user)
+
+        page_number = self._parse_page(page)
+        page_size_number = self._parse_page_size(page_size)
+
+        organizer_id = None if current_user.role == "ADMIN" else current_user.id
+        query = self.event_import_log_repo.list_logs(organizer_id=organizer_id)
+
+        total_items = query.count()
+        total_pages = max(1, math.ceil(total_items / page_size_number))
+        offset = (page_number - 1) * page_size_number
+        logs = query.offset(offset).limit(page_size_number).all()
+        response_logs = [self._to_import_log_response(log) for log in logs]
+
+        status_summary = {
+            "success": 0,
+            "partialSuccess": 0,
+            "failed": 0,
+            "processing": 0,
+        }
+        type_summary = {
+            "csv": 0,
+            "json": 0,
+        }
+        for item in response_logs:
+            if item["status"] == "SUCCESS":
+                status_summary["success"] += 1
+            elif item["status"] == "PARTIAL_SUCCESS":
+                status_summary["partialSuccess"] += 1
+            elif item["status"] == "FAILED":
+                status_summary["failed"] += 1
+            elif item["status"] == "PROCESSING":
+                status_summary["processing"] += 1
+
+            if item["importType"] == "CSV":
+                type_summary["csv"] += 1
+            else:
+                type_summary["json"] += 1
+
+        return {
+            "success": True,
+            "message": "ดึงประวัติการนำเข้าสำเร็จ",
+            "data": response_logs,
+            "meta": {
+                "page": page_number,
+                "pageSize": page_size_number,
+                "totalItems": total_items,
+                "totalPages": total_pages,
+                "summary": {
+                    "status": status_summary,
+                    "type": type_summary,
+                },
+            },
+        }
 
     def get_event_detail(self, event_id: int, current_user: User | None = None) -> dict:
         event = self.event_repo.get_by_id(event_id)
