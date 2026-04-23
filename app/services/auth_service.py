@@ -269,10 +269,12 @@ class AuthService:
                 ],
             )
 
+        profile_image_url = str(payload.profile_image_url) if payload.profile_image_url is not None else None
+
         updated_user = self.user_repo.update_profile(
             user=current_user,
             full_name=payload.full_name,
-            profile_image_url=payload.profile_image_url,
+            profile_image_url=profile_image_url,
         )
         return {
             "success": True,

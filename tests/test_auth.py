@@ -32,7 +32,11 @@ def teardown_function():
     app.dependency_overrides.clear()
 
 
-def create_student_user(email: str = "student@example.com", password_hash: str = "hashed_pw") -> int:
+def create_student_user(
+    email: str = "student@example.com",
+    password_hash: str = "hashed_pw",
+    profile_image_url: str | None = None,
+) -> int:
     db = TestingSessionLocal()
     try:
         user = User(
@@ -41,6 +45,7 @@ def create_student_user(email: str = "student@example.com", password_hash: str =
             password_hash=password_hash,
             role="STUDENT",
             is_active=True,
+            profile_image_url=profile_image_url,
         )
         db.add(user)
         db.commit()
@@ -107,7 +112,11 @@ def test_login_and_me_flow(monkeypatch):
     monkeypatch.setattr("app.services.auth_service.verify_password", lambda plain, hashed: plain == "Password123!")
     client = TestClient(app)
 
-    create_student_user(email="student@login.com", password_hash="any_hash")
+    create_student_user(
+        email="student@login.com",
+        password_hash="any_hash",
+        profile_image_url="https://example.com/profile.jpg",
+    )
 
     login_response = client.post(
         "/api/v1/auth/login",
@@ -124,7 +133,10 @@ def test_login_and_me_flow(monkeypatch):
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert me_response.status_code == 200
-    assert me_response.json()["data"]["email"] == "student@login.com"
+    me_data = me_response.json()["data"]
+    assert me_data["email"] == "student@login.com"
+    assert me_data["isActive"] is True
+    assert me_data["profileImageUrl"] == "https://example.com/profile.jpg"
 
     refresh_response = client.post(
         "/api/v1/auth/refresh",
@@ -155,7 +167,16 @@ def test_patch_me_and_change_password(monkeypatch):
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert patch_response.status_code == 200
-    assert patch_response.json()["data"]["fullName"] == "Updated Name"
+    patch_data = patch_response.json()["data"]
+    assert patch_data["fullName"] == "Updated Name"
+    assert patch_data["profileImageUrl"] == "https://example.com/avatar.jpg"
+
+    me_after_patch = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert me_after_patch.status_code == 200
+    assert me_after_patch.json()["data"]["profileImageUrl"] == "https://example.com/avatar.jpg"
 
     change_pass_response = client.post(
         "/api/v1/auth/change-password",
@@ -174,3 +195,24 @@ def test_patch_me_and_change_password(monkeypatch):
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert logout_response.status_code == 200
+
+
+def test_patch_me_rejects_invalid_profile_image_url(monkeypatch):
+    monkeypatch.setattr("app.services.auth_service.verify_password", lambda plain, hashed: plain == "Password123!")
+    client = TestClient(app)
+
+    create_student_user(email="student@invalid-url.com", password_hash="any_hash")
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "student@invalid-url.com", "password": "Password123!"},
+    )
+    assert login_response.status_code == 200
+    access_token = login_response.json()["data"]["accessToken"]
+
+    patch_response = client.patch(
+        "/api/v1/auth/me",
+        json={"profileImageUrl": "not-a-valid-url"},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert patch_response.status_code == 422
