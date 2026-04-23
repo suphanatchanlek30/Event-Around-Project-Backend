@@ -1,5 +1,8 @@
+from datetime import UTC, datetime
+
 from app.core.database import Base, get_db
 from app.core.security import create_access_token
+from app.models.event import Event
 from app.main import app
 from app.models.event_category import EventCategory
 from app.models.user import User
@@ -64,6 +67,30 @@ def create_category(name: str, description: str | None = None, is_active: bool =
         db.close()
 
 
+def create_event(category_id: int, organizer_id: int, title: str = "Category Event") -> Event:
+    db = TestingSessionLocal()
+    try:
+        event = Event(
+            title=title,
+            description="desc",
+            short_description=None,
+            location_name="Room A",
+            latitude=15.0,
+            longitude=104.9,
+            start_time=datetime(2026, 5, 1, 9, 0, tzinfo=UTC),
+            end_time=datetime(2026, 5, 1, 12, 0, tzinfo=UTC),
+            status="PUBLISHED",
+            category_id=category_id,
+            organizer_id=organizer_id,
+        )
+        db.add(event)
+        db.commit()
+        db.refresh(event)
+        return event
+    finally:
+        db.close()
+
+
 def auth_header_for(user: User) -> dict[str, str]:
     token, _ = create_access_token(user_id=user.id, role=user.role)
     return {"Authorization": f"Bearer {token}"}
@@ -71,8 +98,10 @@ def auth_header_for(user: User) -> dict[str, str]:
 
 def test_list_categories_only_active_by_default():
     client = TestClient(app)
-    create_category("Academic", "กิจกรรมเชิงวิชาการ", is_active=True)
+    organizer = create_user(role="ORGANIZER", email="org-cat-list@example.com")
+    active_category = create_category("Academic", "กิจกรรมเชิงวิชาการ", is_active=True)
     create_category("Legacy", "หมวดเก่า", is_active=False)
+    create_event(active_category.id, organizer.id)
 
     response = client.get("/api/v1/categories")
 
@@ -81,6 +110,9 @@ def test_list_categories_only_active_by_default():
     assert body["success"] is True
     assert len(body["data"]) == 1
     assert body["data"][0]["name"] == "Academic"
+    assert body["data"][0]["eventCount"] == 1
+    assert "createdAt" in body["data"][0]
+    assert "updatedAt" in body["data"][0]
 
 
 def test_list_categories_include_inactive_true():
@@ -151,11 +183,16 @@ def test_create_category_duplicate_name_returns_409():
 
 def test_get_category_detail_success_and_not_found():
     client = TestClient(app)
+    organizer = create_user(role="ORGANIZER", email="org-cat-detail@example.com")
     category = create_category("Academic", "กิจกรรมเชิงวิชาการ")
+    create_event(category.id, organizer.id)
 
     ok_response = client.get(f"/api/v1/categories/{category.id}")
     assert ok_response.status_code == 200
     assert ok_response.json()["data"]["categoryId"] == category.id
+    assert ok_response.json()["data"]["eventCount"] == 1
+    assert "createdAt" in ok_response.json()["data"]
+    assert "updatedAt" in ok_response.json()["data"]
 
     not_found_response = client.get("/api/v1/categories/9999")
     assert not_found_response.status_code == 404

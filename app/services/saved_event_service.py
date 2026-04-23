@@ -181,9 +181,20 @@ class SavedEventService:
                 "eventId": orm_event.id,
                 "title": orm_event.title,
                 "locationName": orm_event.location_name,
+                "latitude": orm_event.latitude,
+                "longitude": orm_event.longitude,
                 "startTime": orm_event.start_time,
                 "endTime": orm_event.end_time,
                 "status": orm_event.status,
+                "coverImageUrl": orm_event.cover_image_url,
+                "category": {
+                    "categoryId": orm_event.category.id,
+                    "name": orm_event.category.name,
+                },
+                "organizer": {
+                    "userId": orm_event.organizer.id,
+                    "fullName": orm_event.organizer.full_name,
+                },
                 "savedAt": event_save.created_at,
             })
 
@@ -248,6 +259,9 @@ class SavedEventService:
             "data": {
                 "eventId": event_id,
                 "isSaved": is_saved,
+                "title": event.title,
+                "status": event.status,
+                "coverImageUrl": event.cover_image_url,
             },
         }
 

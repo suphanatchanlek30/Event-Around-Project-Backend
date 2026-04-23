@@ -137,6 +137,8 @@ def test_login_and_me_flow(monkeypatch):
     assert me_data["email"] == "student@login.com"
     assert me_data["isActive"] is True
     assert me_data["profileImageUrl"] == "https://example.com/profile.jpg"
+    assert "createdAt" in me_data
+    assert "updatedAt" in me_data
 
     refresh_response = client.post(
         "/api/v1/auth/refresh",

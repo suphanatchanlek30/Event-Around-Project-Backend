@@ -2,6 +2,7 @@
 
 from app.api.v1.api import api_router
 from app.core.settings import settings
+from datetime import UTC, datetime
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,7 +12,12 @@ def build_standard_health_response() -> dict:
     return {
         "success": True,
         "message": "Event Around API is running",
-        "data": None,
+        "data": {
+            "service": settings.app_name,
+            "environment": settings.app_env,
+            "apiPrefix": settings.api_v1_prefix,
+            "serverTime": datetime.now(UTC).isoformat(),
+        },
     }
 
 app = FastAPI(
@@ -48,7 +54,11 @@ def root():
     return {
         "success": True,
         "message": "Welcome to Event Around API",
-        "data": None,
+        "data": {
+            "service": settings.app_name,
+            "environment": settings.app_env,
+            "apiPrefix": settings.api_v1_prefix,
+        },
     }
 
 

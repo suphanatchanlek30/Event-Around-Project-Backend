@@ -373,6 +373,11 @@ def test_get_saved_events_success_returns_list_with_meta():
 	assert body["data"][0]["eventId"] == event.id
 	assert body["data"][0]["title"] == "Saved Workshop"
 	assert body["data"][0]["status"] == "PUBLISHED"
+	assert body["data"][0]["coverImageUrl"] == "https://example.com/event.jpg"
+	assert "latitude" in body["data"][0]
+	assert "longitude" in body["data"][0]
+	assert body["data"][0]["category"]["name"] == "Workshop"
+	assert "organizer" in body["data"][0]
 	assert "savedAt" in body["data"][0]
 	assert body["meta"]["totalItems"] == 1
 	assert body["meta"]["page"] == 1
@@ -669,6 +674,9 @@ def test_check_saved_event_is_saved_returns_true():
 	assert body["message"] == "ตรวจสอบสถานะการบันทึกสำเร็จ"
 	assert body["data"]["eventId"] == event.id
 	assert body["data"]["isSaved"] is True
+	assert body["data"]["title"] == "Event Check Saved"
+	assert body["data"]["status"] == "PUBLISHED"
+	assert body["data"]["coverImageUrl"] == "https://example.com/event.jpg"
 
 
 def test_check_saved_event_not_saved_returns_false():
