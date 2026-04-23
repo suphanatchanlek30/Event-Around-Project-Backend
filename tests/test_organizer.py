@@ -73,6 +73,7 @@ def create_event(
     organizer_id: int,
     status: str = "PUBLISHED",
     title: str = "Test Event",
+    cover_image_url: str | None = None,
 ) -> Event:
     db = TestingSessionLocal()
     try:
@@ -88,6 +89,7 @@ def create_event(
             status=status,
             category_id=category_id,
             organizer_id=organizer_id,
+            cover_image_url=cover_image_url,
         )
         db.add(event)
         db.commit()
@@ -145,6 +147,8 @@ def test_dashboard_returns_correct_counts():
     assert body["success"] is True
     assert body["message"] == "ดึง dashboard สำเร็จ"
     data = body["data"]
+    assert data["organizer"]["userId"] == organizer.id
+    assert data["organizer"]["role"] == "ORGANIZER"
     assert data["totalEvents"] == 6
     assert data["draftEvents"] == 2
     assert data["publishedEvents"] == 3
@@ -235,7 +239,13 @@ def test_event_stats_returns_correct_data():
     student2 = create_user("STUDENT", "stu2_stats@test.com")
     cat = create_category()
 
-    event = create_event(cat.id, organizer.id, status="PUBLISHED", title="Python Workshop")
+    event = create_event(
+        cat.id,
+        organizer.id,
+        status="PUBLISHED",
+        title="Python Workshop",
+        cover_image_url="https://example.com/stats.jpg",
+    )
     create_event_save(event.id, student1.id)
     create_event_save(event.id, student2.id)
 
@@ -253,6 +263,9 @@ def test_event_stats_returns_correct_data():
     assert data["eventId"] == event.id
     assert data["title"] == "Python Workshop"
     assert data["status"] == "PUBLISHED"
+    assert data["coverImageUrl"] == "https://example.com/stats.jpg"
+    assert data["locationName"] == "Room 501"
+    assert data["category"]["name"] == "Workshop"
     assert data["savedCount"] == 2
     assert "startTime" in data
     assert "endTime" in data

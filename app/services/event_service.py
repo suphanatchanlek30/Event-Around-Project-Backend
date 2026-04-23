@@ -665,10 +665,13 @@ class EventService:
         return {
             "eventId": event.get_event_id(),
             "title": event.get_title(),
+            "description": event.get_description(),
+            "shortDescription": event.get_short_description(),
             "locationName": event.get_location_name(),
             "startTime": event.get_start_time(),
             "endTime": event.get_end_time(),
             "status": event.get_status(),
+            "coverImageUrl": event.get_cover_image_url(),
             "category": {
                 "categoryId": event.get_category().get_category_id(),
                 "name": event.get_category().get_name(),
@@ -679,7 +682,13 @@ class EventService:
             },
         }
 
-    def _to_detail_response(self, event: DomainEvent, saved_count: int, is_saved: bool) -> dict:
+    def _to_detail_response(
+        self,
+        event: DomainEvent,
+        saved_count: int,
+        is_saved: bool,
+        cancel_reason: str | None,
+    ) -> dict:
         return {
             "eventId": event.get_event_id(),
             "title": event.get_title(),
@@ -691,6 +700,7 @@ class EventService:
             "startTime": event.get_start_time(),
             "endTime": event.get_end_time(),
             "status": event.get_status(),
+            "cancelReason": cancel_reason,
             "coverImageUrl": event.get_cover_image_url(),
             "category": {
                 "categoryId": event.get_category().get_category_id(),
@@ -733,7 +743,7 @@ class EventService:
         return {
             "success": True,
             "message": "ดึงรายละเอียดกิจกรรมสำเร็จ",
-            "data": self._to_detail_response(domain_event, saved_count, is_saved),
+            "data": self._to_detail_response(domain_event, saved_count, is_saved, event.cancel_reason),
         }
 
     def get_my_events(
@@ -801,10 +811,20 @@ class EventService:
             response_events.append({
                 "eventId": event.get_event_id(),
                 "title": event.get_title(),
+                "locationName": event.get_location_name(),
                 "status": event.get_status(),
                 "savedCount": saved_count,
+                "coverImageUrl": event.get_cover_image_url(),
                 "startTime": event.get_start_time().isoformat(),
                 "endTime": event.get_end_time().isoformat(),
+                "category": {
+                    "categoryId": event.get_category().get_category_id(),
+                    "name": event.get_category().get_name(),
+                },
+                "organizer": {
+                    "userId": event.get_organizer().get_user_id(),
+                    "fullName": event.get_organizer().get_name(),
+                },
             })
 
         return {
@@ -854,12 +874,24 @@ class EventService:
 
         response_events = []
         for orm_event in orm_events:
+            saved_count = self.event_repo.count_saves(orm_event.id)
             response_events.append({
                 "eventId": orm_event.id,
                 "title": orm_event.title,
+                "locationName": orm_event.location_name,
                 "startTime": orm_event.start_time.isoformat(),
                 "endTime": orm_event.end_time.isoformat(),
                 "status": orm_event.status,
+                "coverImageUrl": orm_event.cover_image_url,
+                "savedCount": saved_count,
+                "category": {
+                    "categoryId": orm_event.category.id,
+                    "name": orm_event.category.name,
+                },
+                "organizer": {
+                    "userId": orm_event.organizer.id,
+                    "fullName": orm_event.organizer.full_name,
+                },
             })
 
         return {
@@ -909,12 +941,24 @@ class EventService:
 
         response_events = []
         for orm_event in orm_events:
+            saved_count = self.event_repo.count_saves(orm_event.id)
             response_events.append({
                 "eventId": orm_event.id,
                 "title": orm_event.title,
+                "locationName": orm_event.location_name,
                 "status": orm_event.status,
                 "startTime": orm_event.start_time.isoformat(),
                 "endTime": orm_event.end_time.isoformat(),
+                "coverImageUrl": orm_event.cover_image_url,
+                "savedCount": saved_count,
+                "category": {
+                    "categoryId": orm_event.category.id,
+                    "name": orm_event.category.name,
+                },
+                "organizer": {
+                    "userId": orm_event.organizer.id,
+                    "fullName": orm_event.organizer.full_name,
+                },
             })
 
         return {
@@ -1329,9 +1373,15 @@ class EventService:
                 "distanceKm": round(distance, 2),
                 "startTime": orm_event.start_time.isoformat(),
                 "endTime": orm_event.end_time.isoformat(),
+                "status": orm_event.status,
+                "coverImageUrl": orm_event.cover_image_url,
                 "category": {
                     "categoryId": category.id,
                     "name": category.name,
+                },
+                "organizer": {
+                    "userId": orm_event.organizer.id,
+                    "fullName": orm_event.organizer.full_name,
                 },
             })
         
@@ -1416,6 +1466,13 @@ class EventService:
                 "locationName": orm_event.location_name,
                 "distanceKm": round(distance, 2),
                 "startTime": orm_event.start_time.isoformat(),
+                "endTime": orm_event.end_time.isoformat(),
+                "status": orm_event.status,
+                "coverImageUrl": orm_event.cover_image_url,
+                "category": {
+                    "categoryId": orm_event.category.id,
+                    "name": orm_event.category.name,
+                },
             })
         
         return {

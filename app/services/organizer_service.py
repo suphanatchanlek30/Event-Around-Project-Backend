@@ -39,6 +39,12 @@ class OrganizerService:
             "success": True,
             "message": "ดึง dashboard สำเร็จ",
             "data": {
+                "organizer": {
+                    "userId": current_user.id,
+                    "fullName": current_user.full_name,
+                    "email": current_user.email,
+                    "role": current_user.role,
+                },
                 "totalEvents": total,
                 "draftEvents": draft,
                 "publishedEvents": published,
@@ -84,9 +90,16 @@ class OrganizerService:
             "data": {
                 "eventId": event.id,
                 "title": event.title,
+                "locationName": event.location_name,
                 "status": event.status,
+                "coverImageUrl": event.cover_image_url,
                 "savedCount": saved_count,
                 "startTime": event.start_time.isoformat(),
                 "endTime": event.end_time.isoformat(),
+                "cancelReason": event.cancel_reason,
+                "category": {
+                    "categoryId": event.category.id,
+                    "name": event.category.name,
+                },
             },
         }

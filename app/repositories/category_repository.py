@@ -1,4 +1,5 @@
 from app.models.event_category import EventCategory
+from app.models.event import Event
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -48,3 +49,11 @@ class CategoryRepository:
         self.db.commit()
         self.db.refresh(category)
         return category
+
+    def count_events_by_category(self, category_id: int) -> int:
+        return (
+            self.db.query(func.count(Event.id))
+            .filter(Event.category_id == category_id)
+            .scalar()
+            or 0
+        )
