@@ -1,10 +1,11 @@
 import csv
 import io
 import math
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from app.core.exceptions import bad_request, conflict, forbidden, not_found
+from app.core.timezone import get_now_utc, normalize_datetime_for_storage, parse_datetime_input
 from app.domain.event import Event as DomainEvent
 from app.domain.event_category import EventCategory as DomainEventCategory
 from app.domain.event_manager import EventManager
@@ -116,7 +117,7 @@ class EventService:
             return None
 
         try:
-            parsed = datetime.fromisoformat(value)
+            return parse_datetime_input(value)
         except ValueError:
             raise bad_request(
                 message="ข้อมูล query ไม่ถูกต้อง",
@@ -128,13 +129,6 @@ class EventService:
                     }
                 ],
             ) from None
-
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=UTC)
-        else:
-            parsed = parsed.astimezone(UTC)
-
-        return parsed
 
     def _parse_event_status(self, status: str | None, current_user: User) -> str:
         if status is None:
@@ -242,7 +236,7 @@ class EventService:
             errors.append({"row": row_number, "field": "startTime", "detail": "startTime ต้องระบุ"})
         else:
             try:
-                start_time = datetime.fromisoformat(start_time_value)
+                start_time = parse_datetime_input(start_time_value)
             except ValueError:
                 errors.append({"row": row_number, "field": "startTime", "detail": "Invalid datetime"})
 
@@ -251,7 +245,7 @@ class EventService:
             errors.append({"row": row_number, "field": "endTime", "detail": "endTime ต้องระบุ"})
         else:
             try:
-                end_time = datetime.fromisoformat(end_time_value)
+                end_time = parse_datetime_input(end_time_value)
             except ValueError:
                 errors.append({"row": row_number, "field": "endTime", "detail": "Invalid datetime"})
 
@@ -273,14 +267,6 @@ class EventService:
                 errors.append({"row": row_number, "field": "latitude/longitude", "detail": "Invalid coordinates"})
 
         if start_time is not None and end_time is not None:
-            if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=UTC)
-            else:
-                start_time = start_time.astimezone(UTC)
-            if end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=UTC)
-            else:
-                end_time = end_time.astimezone(UTC)
             if start_time >= end_time:
                 errors.append({"row": row_number, "field": "startTime/endTime", "detail": "startTime ต้องน้อยกว่า endTime"})
 
@@ -350,14 +336,8 @@ class EventService:
             errors.append({"row": row_number, "field": "endTime", "detail": "endTime ต้องระบุ"})
 
         if start_time is not None and end_time is not None:
-            if start_time.tzinfo is None:
-                start_time = start_time.replace(tzinfo=UTC)
-            else:
-                start_time = start_time.astimezone(UTC)
-            if end_time.tzinfo is None:
-                end_time = end_time.replace(tzinfo=UTC)
-            else:
-                end_time = end_time.astimezone(UTC)
+            start_time = normalize_datetime_for_storage(start_time)
+            end_time = normalize_datetime_for_storage(end_time)
             if start_time >= end_time:
                 errors.append({"row": row_number, "field": "startTime/endTime", "detail": "startTime ต้องน้อยกว่า endTime"})
 
@@ -940,8 +920,8 @@ class EventService:
                 "status": event.get_status(),
                 "savedCount": saved_count,
                 "coverImageUrl": event.get_cover_image_url(),
-                "startTime": event.get_start_time().isoformat(),
-                "endTime": event.get_end_time().isoformat(),
+                "startTime": event.get_start_time(),
+                "endTime": event.get_end_time(),
                 "category": {
                     "categoryId": event.get_category().get_category_id(),
                     "name": event.get_category().get_name(),
@@ -983,7 +963,7 @@ class EventService:
         query = self.event_repo.get_query()
         query = query.filter(Event.status == "PUBLISHED")
 
-        now = datetime.now(UTC)
+        now = get_now_utc()
         query = query.filter(Event.start_time > now)
 
         if category_id is not None:
@@ -1004,8 +984,8 @@ class EventService:
                 "eventId": orm_event.id,
                 "title": orm_event.title,
                 "locationName": orm_event.location_name,
-                "startTime": orm_event.start_time.isoformat(),
-                "endTime": orm_event.end_time.isoformat(),
+                "startTime": orm_event.start_time,
+                "endTime": orm_event.end_time,
                 "status": orm_event.status,
                 "coverImageUrl": orm_event.cover_image_url,
                 "savedCount": saved_count,
@@ -1050,7 +1030,7 @@ class EventService:
         query = self.event_repo.get_query()
         query = query.filter(Event.status == "PUBLISHED")
 
-        now = datetime.now(UTC)
+        now = get_now_utc()
         query = query.filter(Event.end_time > now)
 
         if category_id is not None:
@@ -1072,8 +1052,8 @@ class EventService:
                 "title": orm_event.title,
                 "locationName": orm_event.location_name,
                 "status": orm_event.status,
-                "startTime": orm_event.start_time.isoformat(),
-                "endTime": orm_event.end_time.isoformat(),
+                "startTime": orm_event.start_time,
+                "endTime": orm_event.end_time,
                 "coverImageUrl": orm_event.cover_image_url,
                 "savedCount": saved_count,
                 "category": {
@@ -1128,6 +1108,9 @@ class EventService:
                 ],
             )
 
+        start_time = normalize_datetime_for_storage(payload.start_time)
+        end_time = normalize_datetime_for_storage(payload.end_time)
+
         event = self.event_repo.create(
             title=payload.title,
             description=payload.description,
@@ -1135,8 +1118,8 @@ class EventService:
             location_name=payload.location_name,
             latitude=payload.latitude,
             longitude=payload.longitude,
-            start_time=payload.start_time,
-            end_time=payload.end_time,
+            start_time=start_time,
+            end_time=end_time,
             status=status,
             category_id=payload.category_id,
             organizer_id=current_user.id,
@@ -1197,9 +1180,9 @@ class EventService:
         if payload.longitude is not None:
             event.longitude = payload.longitude
         if payload.start_time is not None:
-            event.start_time = payload.start_time
+            event.start_time = normalize_datetime_for_storage(payload.start_time)
         if payload.end_time is not None:
-            event.end_time = payload.end_time
+            event.end_time = normalize_datetime_for_storage(payload.end_time)
 
         if event.latitude is not None and event.longitude is not None:
             self._validate_coordinates(event.latitude, event.longitude)
@@ -1496,8 +1479,8 @@ class EventService:
                 "latitude": orm_event.latitude,
                 "longitude": orm_event.longitude,
                 "distanceKm": round(distance, 2),
-                "startTime": orm_event.start_time.isoformat(),
-                "endTime": orm_event.end_time.isoformat(),
+                "startTime": orm_event.start_time,
+                "endTime": orm_event.end_time,
                 "status": orm_event.status,
                 "coverImageUrl": orm_event.cover_image_url,
                 "category": {
@@ -1590,8 +1573,8 @@ class EventService:
                 "longitude": orm_event.longitude,
                 "locationName": orm_event.location_name,
                 "distanceKm": round(distance, 2),
-                "startTime": orm_event.start_time.isoformat(),
-                "endTime": orm_event.end_time.isoformat(),
+                "startTime": orm_event.start_time,
+                "endTime": orm_event.end_time,
                 "status": orm_event.status,
                 "coverImageUrl": orm_event.cover_image_url,
                 "category": {

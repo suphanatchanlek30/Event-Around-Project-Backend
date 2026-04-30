@@ -1,6 +1,8 @@
 from datetime import datetime
 
+from app.core.timezone import parse_datetime_input
 from pydantic import BaseModel, Field
+from pydantic import field_validator
 
 
 class EventCategoryResponse(BaseModel):
@@ -39,6 +41,13 @@ class EventCreateRequest(BaseModel):
     cover_image_url: str | None = Field(None, alias="coverImageUrl")
     status: str | None = Field(default="DRAFT")
 
+    @field_validator("start_time", "end_time", mode="before")
+    @classmethod
+    def normalize_time_fields(cls, value):
+        if value is None:
+            return None
+        return parse_datetime_input(value)
+
     model_config = {"populate_by_name": True}
 
 
@@ -54,6 +63,13 @@ class EventImportItem(BaseModel):
     category_id: int = Field(..., alias="categoryId")
     cover_image_url: str | None = Field(None, alias="coverImageUrl")
     status: str | None = None
+
+    @field_validator("start_time", "end_time", mode="before")
+    @classmethod
+    def normalize_time_fields(cls, value):
+        if value is None:
+            return None
+        return parse_datetime_input(value)
 
     model_config = {"populate_by_name": True}
 
@@ -75,6 +91,13 @@ class EventUpdateRequest(BaseModel):
     end_time: datetime | None = Field(None, alias="endTime")
     category_id: int | None = Field(None, alias="categoryId")
     cover_image_url: str | None = Field(None, alias="coverImageUrl")
+
+    @field_validator("start_time", "end_time", mode="before")
+    @classmethod
+    def normalize_time_fields(cls, value):
+        if value is None:
+            return None
+        return parse_datetime_input(value)
 
     model_config = {"populate_by_name": True}
 

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_debug: bool = True
     api_v1_prefix: str = "/api/v1"
+    app_timezone: str = "Asia/Bangkok"
 
     cors_origins: str = Field(
         default=(

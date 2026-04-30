@@ -7,6 +7,7 @@ from uuid import uuid4
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import forbidden, unauthorized
+from app.core.timezone import get_now_utc
 from app.repositories.user_repository import UserRepository
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -32,7 +33,7 @@ def hash_token(token: str) -> str:
 
 def create_access_token(user_id: int, role: str) -> tuple[str, int]:
     expires_in = settings.access_token_expire_minutes * 60
-    exp = datetime.now(UTC) + timedelta(seconds=expires_in)
+    exp = get_now_utc() + timedelta(seconds=expires_in)
     payload = {
         "sub": str(user_id),
         "role": role,
@@ -44,7 +45,7 @@ def create_access_token(user_id: int, role: str) -> tuple[str, int]:
 
 
 def create_refresh_token(user_id: int, role: str) -> tuple[str, datetime]:
-    exp_dt = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    exp_dt = get_now_utc() + timedelta(days=settings.refresh_token_expire_days)
     payload = {
         "sub": str(user_id),
         "role": role,
@@ -53,7 +54,7 @@ def create_refresh_token(user_id: int, role: str) -> tuple[str, datetime]:
         "exp": exp_dt,
     }
     token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-    return token, exp_dt.replace(tzinfo=None)
+    return token, exp_dt
 
 
 def decode_token(token: str, expected_type: str) -> dict:

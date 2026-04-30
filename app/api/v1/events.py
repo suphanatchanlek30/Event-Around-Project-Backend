@@ -1,5 +1,6 @@
 from app.core.database import get_db
 from app.core.security import get_current_user, get_optional_current_user
+from app.core.timezone import serialize_datetime_payload
 from app.models.user import User
 from app.schemas.event import (
     EventCancelRequest,
@@ -27,7 +28,7 @@ def list_events(
     db: Session = Depends(get_db),
 ):
     service = EventService(db)
-    return service.list_events(
+    return serialize_datetime_payload(service.list_events(
         page=page,
         page_size=page_size,
         search=search,
@@ -37,7 +38,7 @@ def list_events(
         end_to=end_to,
         sort_by=sort_by,
         sort_order=sort_order,
-    )
+    ))
 
 
 @router.get("/my-events", status_code=status.HTTP_200_OK)
@@ -52,7 +53,7 @@ def get_my_events(
     current_user: User = Depends(get_current_user),
 ):
     service = EventService(db)
-    return service.get_my_events(
+    return serialize_datetime_payload(service.get_my_events(
         page=page,
         page_size=page_size,
         status=status,
@@ -60,7 +61,7 @@ def get_my_events(
         sort_by=sort_by,
         sort_order=sort_order,
         current_user=current_user,
-    )
+    ))
 
 
 @router.get("/upcoming", status_code=status.HTTP_200_OK)
@@ -73,13 +74,13 @@ def get_upcoming_events(
     db: Session = Depends(get_db),
 ):
     service = EventService(db)
-    return service.get_upcoming_events(
+    return serialize_datetime_payload(service.get_upcoming_events(
         page=page,
         page_size=page_size,
         category_id=category_id,
         sort_by=sort_by,
         sort_order=sort_order,
-    )
+    ))
 
 
 @router.get("/active", status_code=status.HTTP_200_OK)
@@ -92,13 +93,13 @@ def get_active_events(
     db: Session = Depends(get_db),
 ):
     service = EventService(db)
-    return service.get_active_events(
+    return serialize_datetime_payload(service.get_active_events(
         page=page,
         page_size=page_size,
         category_id=category_id,
         sort_by=sort_by,
         sort_order=sort_order,
-    )
+    ))
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -108,7 +109,7 @@ def create_event(
     current_user: User = Depends(get_current_user),
 ):
     service = EventService(db)
-    return service.create_event(payload, current_user)
+    return serialize_datetime_payload(service.create_event(payload, current_user))
 
 
 @router.patch("/{event_id}", status_code=status.HTTP_200_OK)
@@ -119,7 +120,7 @@ def update_event(
     current_user: User = Depends(get_current_user),
 ):
     service = EventService(db)
-    return service.update_event(event_id=event_id, payload=payload, current_user=current_user)
+    return serialize_datetime_payload(service.update_event(event_id=event_id, payload=payload, current_user=current_user))
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_200_OK)
@@ -129,7 +130,7 @@ def delete_event(
     current_user: User = Depends(get_current_user),
 ):
     service = EventService(db)
-    return service.delete_event(event_id=event_id, current_user=current_user)
+    return serialize_datetime_payload(service.delete_event(event_id=event_id, current_user=current_user))
 
 
 @router.post("/{event_id}/publish", status_code=status.HTTP_200_OK)
@@ -139,7 +140,7 @@ def publish_event(
     current_user: User = Depends(get_current_user),
 ):
     service = EventService(db)
-    return service.publish_event(event_id=event_id, current_user=current_user)
+    return serialize_datetime_payload(service.publish_event(event_id=event_id, current_user=current_user))
 
 
 @router.post("/{event_id}/cancel", status_code=status.HTTP_200_OK)
@@ -150,7 +151,7 @@ def cancel_event(
     current_user: User = Depends(get_current_user),
 ):
     service = EventService(db)
-    return service.cancel_event(event_id=event_id, payload=payload, current_user=current_user)
+    return serialize_datetime_payload(service.cancel_event(event_id=event_id, payload=payload, current_user=current_user))
 
 
 @router.get("/nearby", status_code=status.HTTP_200_OK)
@@ -167,7 +168,7 @@ def get_nearby_events(
     db: Session = Depends(get_db),
 ):
     service = EventService(db)
-    return service.get_nearby_events(
+    return serialize_datetime_payload(service.get_nearby_events(
         latitude=latitude,
         longitude=longitude,
         radius_km=radius_km,
@@ -177,7 +178,7 @@ def get_nearby_events(
         page_size=page_size,
         sort_by=sort_by,
         sort_order=sort_order,
-    )
+    ))
 
 
 @router.get("/map", status_code=status.HTTP_200_OK)
@@ -190,13 +191,13 @@ def get_map_events(
     db: Session = Depends(get_db),
 ):
     service = EventService(db)
-    return service.get_map_events(
+    return serialize_datetime_payload(service.get_map_events(
         latitude=latitude,
         longitude=longitude,
         radius_km=radius_km,
         category_id=category_id,
         search=search,
-    )
+    ))
 
 
 @router.get("/{event_id}", status_code=status.HTTP_200_OK)
@@ -206,4 +207,4 @@ def get_event_detail(
     current_user: User | None = Depends(get_optional_current_user),
 ):
     service = EventService(db)
-    return service.get_event_detail(event_id=event_id, current_user=current_user)
+    return serialize_datetime_payload(service.get_event_detail(event_id=event_id, current_user=current_user))

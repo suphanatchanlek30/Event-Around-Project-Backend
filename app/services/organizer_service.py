@@ -94,8 +94,8 @@ class OrganizerService:
                 "status": event.status,
                 "coverImageUrl": event.cover_image_url,
                 "savedCount": saved_count,
-                "startTime": event.start_time.isoformat(),
-                "endTime": event.end_time.isoformat(),
+                "startTime": event.start_time,
+                "endTime": event.end_time,
                 "cancelReason": event.cancel_reason,
                 "category": {
                     "categoryId": event.category.id,
