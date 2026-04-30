@@ -1,6 +1,6 @@
 # app/core/security.py
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from hashlib import sha256
 from uuid import uuid4
 
