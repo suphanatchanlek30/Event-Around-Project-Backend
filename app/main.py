@@ -1,9 +1,6 @@
-# app/main.py
-
-from datetime import UTC, datetime
-
 from app.api.v1.api import api_router
 from app.core.settings import settings
+from app.core.timezone import format_datetime_for_api, get_now_utc
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,7 +14,7 @@ def build_standard_health_response() -> dict:
             "service": settings.app_name,
             "environment": settings.app_env,
             "apiPrefix": settings.api_v1_prefix,
-            "serverTime": datetime.now(UTC).isoformat(),
+            "serverTime": format_datetime_for_api(get_now_utc()),
         },
     }
 

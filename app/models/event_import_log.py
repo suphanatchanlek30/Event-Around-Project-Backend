@@ -1,7 +1,8 @@
 from datetime import datetime
 
 from app.core.database import Base
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from app.core.timezone import UTCDateTime, get_now_utc
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -15,6 +16,6 @@ class EventImportLog(Base):
     failed_records: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     default_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=get_now_utc, nullable=False)
 
     organizer = relationship("User", lazy="joined")

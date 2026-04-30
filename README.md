@@ -122,6 +122,7 @@ APP_NAME=Event Around API
 APP_ENV=development
 APP_DEBUG=true
 API_V1_PREFIX=/api/v1
+APP_TIMEZONE=Asia/Bangkok
 
 POSTGRES_USER=event_user
 POSTGRES_PASSWORD=event_pass
@@ -135,6 +136,30 @@ JWT_SECRET_KEY=change-me-in-production
 JWT_ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 REFRESH_TOKEN_EXPIRE_DAYS=7
+```
+
+## Timezone Policy
+
+- `APP_TIMEZONE` ใช้กำหนด timezone สำหรับเวลาที่ส่งออกทาง API โดยค่า default คือ `Asia/Bangkok`
+- ระบบเก็บค่า `datetime` ในฐานข้อมูลเป็น UTC เพื่อให้ deploy บน server timezone อะไรก็ให้ผลลัพธ์เหมือนกัน
+- เวลาที่ตอบกลับไปยัง frontend จะถูกแปลงเป็นเวลาไทยเสมอและส่งในรูปแบบ ISO 8601 ที่มี offset เช่น `2026-04-30T15:20:00+07:00`
+- input ที่ส่งมาเป็น `datetime` แบบไม่มี timezone จะถูกตีความเป็นเวลา `Asia/Bangkok` ก่อนแปลงไปเก็บเป็น UTC
+- ข้อมูลเก่าที่เป็น naive datetime ในคอลัมน์ legacy จะถูกอ่านเป็น UTC และ migration `0008_convert_legacy_datetimes_to_timestamptz.py` ใช้แปลง schema ฝั่ง PostgreSQL ให้เป็น `TIMESTAMP WITH TIME ZONE`
+- access token และ refresh token ยังคำนวณอายุจาก UTC เพื่อให้การหมดอายุคงที่ในทุก environment แต่เมื่อ response มี field เวลา จะส่งออกเป็น Bangkok time
+
+ตัวอย่าง response:
+
+```json
+{
+	"success": true,
+	"message": "ดึงรายละเอียดกิจกรรมสำเร็จ",
+	"data": {
+		"eventId": 101,
+		"startTime": "2026-04-30T15:20:00+07:00",
+		"endTime": "2026-04-30T18:20:00+07:00",
+		"createdAt": "2026-04-25T09:00:00+07:00"
+	}
+}
 ```
 
 ### 4) เปิดฐานข้อมูล PostgreSQL

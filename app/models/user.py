@@ -3,7 +3,8 @@
 from datetime import datetime
 
 from app.core.database import Base
-from sqlalchemy import Boolean, DateTime, String
+from app.core.timezone import UTCDateTime, get_now_utc
+from sqlalchemy import Boolean, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -17,10 +18,10 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     profile_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=get_now_utc, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        UTCDateTime(),
+        default=get_now_utc,
+        onupdate=get_now_utc,
         nullable=False,
     )
