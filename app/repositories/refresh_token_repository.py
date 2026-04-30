@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.core.timezone import get_now_utc
 from app.models.refresh_token import RefreshToken
 from sqlalchemy.orm import Session
 
@@ -16,7 +17,7 @@ class RefreshTokenRepository:
         return row
 
     def get_active_by_hash(self, token_hash: str) -> RefreshToken | None:
-        now = datetime.utcnow()
+        now = get_now_utc()
         return (
             self.db.query(RefreshToken)
             .filter(RefreshToken.token_hash == token_hash)
@@ -28,7 +29,7 @@ class RefreshTokenRepository:
     def revoke_by_hash(self, token_hash: str) -> None:
         row = self.db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
         if row is not None and row.revoked_at is None:
-            row.revoked_at = datetime.utcnow()
+            row.revoked_at = get_now_utc()
             self.db.add(row)
             self.db.commit()
 
@@ -39,7 +40,7 @@ class RefreshTokenRepository:
             .filter(RefreshToken.revoked_at.is_(None))
             .all()
         )
-        now = datetime.utcnow()
+        now = get_now_utc()
         changed = False
         for row in rows:
             row.revoked_at = now

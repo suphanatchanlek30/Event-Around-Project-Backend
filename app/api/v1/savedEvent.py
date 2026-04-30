@@ -1,5 +1,6 @@
 from app.core.database import get_db
 from app.core.security import get_current_user
+from app.core.timezone import serialize_datetime_payload
 from app.models.user import User
 from app.schemas.event import SaveEventRequest
 from app.services.saved_event_service import SavedEventService
@@ -20,14 +21,14 @@ def get_saved_events(
     current_user: User = Depends(get_current_user),
 ):
     service = SavedEventService(db)
-    return service.get_saved_events(
+    return serialize_datetime_payload(service.get_saved_events(
         page=page,
         page_size=page_size,
         status=status,
         sort_by=sort_by,
         sort_order=sort_order,
         current_user=current_user,
-    )
+    ))
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -37,10 +38,10 @@ def save_event(
     current_user: User = Depends(get_current_user),
 ):
     service = SavedEventService(db)
-    return service.save_event(
+    return serialize_datetime_payload(service.save_event(
         event_id=payload.event_id,
         current_user=current_user,
-    )
+    ))
 
 
 @router.get("/check/{event_id}")
@@ -50,10 +51,10 @@ def check_saved_event(
     current_user: User = Depends(get_current_user),
 ):
     service = SavedEventService(db)
-    return service.check_saved_event(
+    return serialize_datetime_payload(service.check_saved_event(
         event_id=event_id,
         current_user=current_user,
-    )
+    ))
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_200_OK)
@@ -63,7 +64,7 @@ def unsave_event(
     current_user: User = Depends(get_current_user),
 ):
     service = SavedEventService(db)
-    return service.unsave_event(
+    return serialize_datetime_payload(service.unsave_event(
         event_id=event_id,
         current_user=current_user,
-    )
+    ))
